@@ -62,6 +62,7 @@ public class MessageHandlerSupportServiceImpl implements MessageHandlerSupportSe
             Integer expressionType = strategy.getExpressionType();
             String expression = strategy.getExpression();
             String componentName = strategy.getComponentName();
+            // TODO: 2024/01/12 权限判定
             if (expressionType == 1 && Objects.equals(expression, rawMessage)) {
                 log.info("消息[{}]全匹配命中处理策略[{}]", messageId, strategy.getStrategyName());
                 return applicationContext.getBean(componentName, MessageHandler.class);
