@@ -109,7 +109,7 @@ public class DivinateMessageHandler implements MessageHandler {
         int customStep2 = Integer.valueOf(String.valueOf(microsecond.charAt((secStart + 4) % microsecondLen)));
 
         int trigramIndex = 0;
-        int trigramLen = trigramList.size();
+        int trigramLen = trigramList.length;
         trigramIndex = (trigramIndex + monthStep - 1) % trigramLen;
         trigramIndex = (trigramIndex + dayStep - 1) % trigramLen;
         trigramIndex = (trigramIndex + hourStep - 1) % trigramLen;
