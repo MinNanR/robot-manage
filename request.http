@@ -1,0 +1,12 @@
+POST {{baseUrl}}/badeling_bot/onMessage
+Content-Type: application/json
+Accept: application/json
+
+{
+  "raw_message": "#火花花费174",
+  "group_id": "667082876",
+  "sender": {
+    "user_id": "978312456"
+  },
+  "message_id": "46393"
+}

@@ -1,0 +1,60 @@
+spring:
+  mvc:
+    view:
+      prefix: /templates/
+      suffix: .html
+  web:
+    resources:
+      static-locations: classpath:/vendor
+  datasource:
+    url: jdbc:sqlite:F:/Minnan/robot-manage/robot.db
+    driver-class-name: org.sqlite.JDBC
+  jpa:
+    hibernate:
+      ddl-auto: none
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    show-sql: true
+
+
+
+
+#    database-platform: org.hibernate.community.dialect.SQLiteDialect
+
+#    hikari:
+#      max-lifetime: 600000
+#      allow-pool-suspension: true
+#      register-mbeans: true
+#      idle-timeout: 60000
+#      connection-timeout: 60000
+
+#  redis:
+#    host: minnan.site
+#    port: 6379
+#    database: 1
+#    password: minnan
+
+server:
+  port: 8102
+  servlet:
+    context-path: /
+
+jwt:
+  route:
+    authentication:
+      path: /rental/auth/login/password, /album/*
+  header: Authorization
+  expiration: 604800
+  scret: min107
+
+logging:
+  file:
+    name: ./logs/robot-manage.log
+    max-history: 30
+
+
+
+aliyun:
+  bucketName: link-server
+  baseUrl: https://minnan.site:2005
+  receiptFolder: receipt
+  utilityFolder: utility
