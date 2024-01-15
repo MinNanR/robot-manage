@@ -10,8 +10,6 @@ import cn.hutool.core.util.StrUtil;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
-import site.minnan.robotmanage.infrastructure.cachekeygen.DivinateKeyGenerator;
-import site.minnan.robotmanage.infrastructure.utils.RedisUtil;
 import site.minnan.robotmanage.strategy.MessageHandler;
 
 import java.util.*;
@@ -115,8 +113,8 @@ public class DivinateMessageHandler implements MessageHandler {
         int monthStep = lunarDate.getMonth(), dayStep = lunarDate.getDay();
         int hourStep = ((t.getField(DateField.HOUR) + 1) % 24) / 2 + 1;
         int microsecondLen = microsecond.length();
-        int customStep1 = Integer.valueOf(String.valueOf(microsecond.charAt(secStart % microsecondLen)));
-        int customStep2 = Integer.valueOf(String.valueOf(microsecond.charAt((secStart + 4) % microsecondLen)));
+        int customStep1 = Integer.parseInt(String.valueOf(microsecond.charAt(secStart % microsecondLen)));
+        int customStep2 = Integer.parseInt(String.valueOf(microsecond.charAt((secStart + 4) % microsecondLen)));
 
         int trigramIndex = 0;
         int trigramLen = trigramList.length;
