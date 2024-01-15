@@ -24,7 +24,7 @@ class DemoApplicationTests {
     QuestionRepository questionRepository;
 
     @Autowired
-    @Qualifier("flame")
+    @Qualifier("divinate")
     MessageHandler messageHandler;
 
     @Test
@@ -53,6 +53,15 @@ class DemoApplicationTests {
     @Test
     public void testFlame() {
         String json = "{'raw_message': '#火花期望30', 'group_id': '667082876', 'sender': {'user_id': '1603'}, 'message_id': '46393'}";
+        JSONObject jsonObject = JSONUtil.parseObj(json);
+        MessageDTO messageDTO = MessageDTO.fromJson(jsonObject);
+        Optional<String> result = messageHandler.handleMessage(messageDTO);
+        System.out.println(result.get());
+    }
+
+    @Test
+    public void testDivinate() {
+        String json = "{'raw_message': '#占卜', 'group_id': '667082876', 'sender': {'user_id': '1603'}, 'message_id': '46393'}";
         JSONObject jsonObject = JSONUtil.parseObj(json);
         MessageDTO messageDTO = MessageDTO.fromJson(jsonObject);
         Optional<String> result = messageHandler.handleMessage(messageDTO);
