@@ -2,6 +2,7 @@ package site.minnan.robotmanage;
 
 import cn.hutool.core.convert.NumberChineseFormatter;
 import cn.hutool.core.lang.Console;
+import cn.hutool.core.util.ReUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import org.junit.jupiter.api.Test;
@@ -25,7 +26,7 @@ class DemoApplicationTests {
     QuestionRepository questionRepository;
 
     @Autowired
-    @Qualifier("query")
+    @Qualifier("nickSet")
     MessageHandler messageHandler;
 
     @Autowired
@@ -92,9 +93,15 @@ class DemoApplicationTests {
         System.out.println(s.orElse("查询失败"));
     }
 
+    @Test
+    public void testNickHandle() {
+        MessageDTO dto = initParam("查询绑定火毒：CoderMinnan");
+        Optional<String> s = messageHandler.handleMessage(dto);
+        System.out.println(s.orElse("处理异常"));
+    }
+
     public static void main(String[] args) {
-        int i = NumberChineseFormatter.chineseToNumber("一百八");
-        System.out.println(i);
+        System.out.println(ReUtil.isMatch("^查询设置.*", "查询设置民难"));
     }
 
 }

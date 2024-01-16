@@ -1,10 +1,10 @@
 package site.minnan.robotmanage.entity.aggregate;
 
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.IdGeneratorType;
 
 /**
  * 查询昵称
@@ -14,9 +14,11 @@ import lombok.Data;
 @Data
 @Entity
 @Table(name = "nick")
+@NoArgsConstructor
 public class Nick {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     /**
@@ -34,5 +36,10 @@ public class Nick {
      */
     private String character;
 
+    public Nick(String qq, String nick, String character) {
+        this.qq = qq;
+        this.nick = nick;
+        this.character = character;
+    }
 
 }
