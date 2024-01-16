@@ -26,7 +26,7 @@ class DemoApplicationTests {
     QuestionRepository questionRepository;
 
     @Autowired
-    @Qualifier("nickSet")
+    @Qualifier("stirUp")
     MessageHandler messageHandler;
 
     @Autowired
@@ -98,6 +98,12 @@ class DemoApplicationTests {
         MessageDTO dto = initParam("查询绑定火毒：CoderMinnan");
         Optional<String> s = messageHandler.handleMessage(dto);
         System.out.println(s.orElse("处理异常"));
+    }
+
+    @Test
+    public void testStirUp(){
+        Optional<String> s = messageHandler.handleMessage(null);
+        System.out.println(s.orElse("占卜失败"));
     }
 
     public static void main(String[] args) {
