@@ -44,8 +44,8 @@ public class QueryMessageHandler implements MessageHandler {
                 职业:%s (区排名%s,服排名%s)
                 """
                 .formatted(c.getName(), c.getServer(),
-                        c.getLevel(), c.getExpPercent(), c.getServerRank(), c.getGlobalRanking(),
-                        c.getJob(), c.getServerClassRanking(), c.getClassRank());
+                        c.getLevel(), c.getExpPercent(), c.getServerLevelRank(), c.getGlobalLevelRank(),
+                        c.getJob(), c.getServerClassRank(), c.getGlobalClassRank());
 
         sb.append(baseInfo)
                 .append("---------------------------------\n");
@@ -76,7 +76,7 @@ public class QueryMessageHandler implements MessageHandler {
             sb.append("---------------------------------\n")
                     .append("职业排名附近的人：\n");
             for (CharacterData nearRank : nearRankList) {
-                String rankLine = "%s-%s:%s(%s)\n".formatted(nearRank.getServerClassRanking(), nearRank.getName(),
+                String rankLine = "%s-%s:%s(%s)\n".formatted(nearRank.getServerClassRank(), nearRank.getName(),
                         nearRank.getLevel(), nearRank.getExpPercent());
                 sb.append(rankLine);
             }

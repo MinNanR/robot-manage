@@ -33,16 +33,16 @@ public class CharacterData {
     private String expPercent;
 
     //职业区排名
-    private String serverClassRanking;
+    private String serverClassRank;
 
     //等级区排名
-    private String serverRank;
+    private String serverLevelRank;
 
     //职业全服排名
-    private String classRank;
+    private String globalClassRank;
 
     //等级全服排名
-    private String globalRanking;
+    private String globalLevelRank;
 
     //成就值
     private String achievementPoints;

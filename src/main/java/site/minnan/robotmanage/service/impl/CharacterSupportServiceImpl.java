@@ -106,10 +106,10 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         } else {
             //排名信息依次为，职业全服排名，等级全服排名，等级区排名，职业区排名
             JSONArray characterRank = rankInfo.getJSONArray(0);
-            characterData.setServerClassRanking(characterRank.getStr(3).replace(",", ""));
-            characterData.setServerRank(characterRank.getStr(2).replaceAll(",", ""));
-            characterData.setClassRank(characterRank.getStr(0).replaceAll(",", ""));
-            characterData.setGlobalRanking(characterRank.getStr(1).replace(",", ""));
+            characterData.setServerClassRank(characterRank.getStr(3).replace(",", ""));
+            characterData.setServerLevelRank(characterRank.getStr(2).replaceAll(",", ""));
+            characterData.setGlobalClassRank(characterRank.getStr(0).replaceAll(",", ""));
+            characterData.setGlobalLevelRank(characterRank.getStr(1).replace(",", ""));
         }
 
         //解析成就信息
@@ -147,7 +147,7 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
                     .map(e -> {
                         CharacterData nearItem = new CharacterData();
                         nearItem.setName(e.getStr(1));
-                        nearItem.setServerClassRanking(e.getStr(2));
+                        nearItem.setServerClassRank(e.getStr(2));
                         nearItem.setLevel(e.getInt(3).toString());
                         nearItem.setExpPercent(e.getStr(4));
                         return nearItem;
