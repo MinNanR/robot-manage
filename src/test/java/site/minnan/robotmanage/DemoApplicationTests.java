@@ -1,5 +1,6 @@
 package site.minnan.robotmanage;
 
+import cn.hutool.core.convert.NumberChineseFormatter;
 import cn.hutool.core.lang.Console;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
@@ -10,6 +11,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import site.minnan.robotmanage.entity.aggregate.Question;
 import site.minnan.robotmanage.entity.dao.QuestionRepository;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
+import site.minnan.robotmanage.service.CharacterSupportService;
+import site.minnan.robotmanage.service.impl.CharacterSupportServiceImpl;
 import site.minnan.robotmanage.strategy.MessageHandler;
 
 import java.util.List;
@@ -25,12 +28,15 @@ class DemoApplicationTests {
     @Qualifier("query")
     MessageHandler messageHandler;
 
+    @Autowired
+    CharacterSupportService characterSupportService;
+
     @Test
     void contextLoads() {
     }
 
     private MessageDTO initParam(String message) {
-        String jsonString = "{'raw_message': '#" + message + "', 'group_id': '667082876', 'sender': {'user_id': '1603'}, 'message_id': '46393'}";
+        String jsonString = "{'raw_message': '#" + message + "', 'group_id': '667082876', 'sender': {'user_id': '978312456'}, 'message_id': '46393'}";
         JSONObject jsonObject = JSONUtil.parseObj(jsonString);
         return MessageDTO.fromJson(jsonObject);
     }
@@ -77,6 +83,18 @@ class DemoApplicationTests {
         MessageDTO param = initParam("查询CoderMinnan");
         Optional<String> opt = messageHandler.handleMessage(param);
         System.out.println(opt.get());
+    }
+
+    @Test
+    public void testParseQueryContent() {
+        MessageDTO dto = initParam("查询我");
+        Optional<String> s = messageHandler.handleMessage(dto);
+        System.out.println(s.orElse("查询失败"));
+    }
+
+    public static void main(String[] args) {
+        int i = NumberChineseFormatter.chineseToNumber("一百八");
+        System.out.println(i);
     }
 
 }

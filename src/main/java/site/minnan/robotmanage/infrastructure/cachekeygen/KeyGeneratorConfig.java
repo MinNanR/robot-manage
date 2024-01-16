@@ -2,6 +2,7 @@ package site.minnan.robotmanage.infrastructure.cachekeygen;
 
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.util.StrUtil;
+import org.hibernate.annotations.Bag;
 import org.springframework.cache.interceptor.KeyGenerator;
 import org.springframework.cache.interceptor.SimpleKey;
 import org.springframework.context.annotation.Bean;
@@ -21,7 +22,7 @@ public class KeyGeneratorConfig {
      *
      * @return
      */
-    @Bean("DivinateKeyGenerator")
+    @Bean("divinateKeyGenerator")
     public KeyGenerator divinateKeyGenerator() {
         return ((target, method, params) -> {
             if (params.length == 0) {
@@ -37,5 +38,24 @@ public class KeyGeneratorConfig {
         });
     }
 
+    /**
+     * 查询键生成器
+     *
+     * @return
+     */
+    @Bean("queryKeyGenerator")
+    public KeyGenerator queryKeyGenerator() {
+        return ((target, method, params) -> {
+            if (params.length == 0) {
+                return SimpleKey.EMPTY;
+            }
+            String today = DateTime.now().toString("yyyyMMdd");
+            Object param = params[0];
+            if (param instanceof String queryName) {
+                return "%s:%s".formatted(today, queryName);
+            }
+            return "";
+        });
+    }
 
 }

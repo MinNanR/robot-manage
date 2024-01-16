@@ -1,26 +1,38 @@
 package site.minnan.robotmanage.service.impl;
 
 import cn.hutool.core.codec.Base64;
+import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.convert.NumberChineseFormatter;
+import cn.hutool.core.date.DateTime;
 import cn.hutool.core.lang.Console;
+import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.ReUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONArray;
+import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import jakarta.persistence.EntityNotFoundException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import site.minnan.robotmanage.entity.aggregate.Nick;
+import site.minnan.robotmanage.entity.aggregate.QueryMap;
+import site.minnan.robotmanage.entity.dao.NickRepository;
 import site.minnan.robotmanage.entity.dao.QueryMapRepository;
-import site.minnan.robotmanage.entity.dto.MessageDTO;
 import site.minnan.robotmanage.entity.vo.CharacterData;
 import site.minnan.robotmanage.entity.vo.ExpData;
+import site.minnan.robotmanage.infrastructure.utils.RedisUtil;
 import site.minnan.robotmanage.service.CharacterSupportService;
 
 import java.net.InetSocketAddress;
 import java.net.Proxy;
+import java.time.Duration;
 import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -37,10 +49,18 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
 
     public static final String BASE_QUERY_URL = "https://mapleranks.com/u/";
 
+    public static final String RANK_CACHE_KEY_TEMPLATE = "rank:%s:%s:%d";
+
+    private RedisUtil redisUtil;
+
     private QueryMapRepository queryMapRepository;
 
-    public CharacterSupportServiceImpl(QueryMapRepository queryMapRepository) {
+    private NickRepository nickRepository;
+
+    public CharacterSupportServiceImpl(QueryMapRepository queryMapRepository, NickRepository nickRepository, RedisUtil redisUtil) {
         this.queryMapRepository = queryMapRepository;
+        this.nickRepository = nickRepository;
+        this.redisUtil = redisUtil;
     }
 
     /**
@@ -50,6 +70,7 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
      * @return
      */
     @Override
+    @Cacheable(value = "query", keyGenerator = "queryKeyGenerator")
     public CharacterData fetchCharacterInfo(String queryName) {
         String queryUrl = BASE_QUERY_URL + queryName.strip();
 
@@ -227,10 +248,61 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
     @Override
     public String parseQueryContent(String queryContent, String userId) {
         if (queryContent.contains("第")) {
-            // TODO: 2024/01/15 排名查询
-            return queryContent;
+            return rankQueryCharacter(queryContent);
         }
-        // TODO: 2024/01/15 用户绑定的名称查询 
-        return queryContent;
+        Nick nick = nickRepository.findByQqAndNick(userId, queryContent);
+        return nick == null ? queryContent : nick.getCharacter();
+    }
+
+    /**
+     * 排名查询角色
+     *
+     * @param queryMessage 查询消息
+     * @return 查询目标
+     */
+    @Override
+    public String rankQueryCharacter(String queryMessage) throws EntityNotFoundException {
+        String[] querySplit = queryMessage.split("第");
+        String queryContent = querySplit[0];
+        String rankString = querySplit[1];
+        int rank;
+        if (NumberUtil.isInteger(rankString)) {
+            rank = Integer.parseInt(rankString);
+        } else {
+            rank = NumberChineseFormatter.chineseToNumber(rankString);
+        }
+
+        String today = DateTime.now().toString("yyyyMMdd");
+        String cacheKey = RANK_CACHE_KEY_TEMPLATE.formatted(today, queryContent, rank);
+        String queryCache = (String) redisUtil.getValue(cacheKey);
+        if (queryCache != null) {
+            return queryCache;
+        }
+
+        QueryMap queryMap = queryMapRepository.findByQueryContent(queryContent);
+        if (queryMap == null) {
+            throw new EntityNotFoundException();
+        }
+
+        String queryUrl = queryMap.getQueryUrl();
+        String fullQueryUrl = StrUtil.format(queryUrl, rank);
+
+        HttpResponse queryResponse = HttpUtil.createGet(fullQueryUrl).execute();
+        String responseJsonString = queryResponse.body();
+        JSONArray queryResultList = JSONUtil.parseArray(responseJsonString);
+        if (CollectionUtil.isEmpty(queryResultList)) {
+            throw new EntityNotFoundException();
+        }
+
+        queryResultList.stream()
+                .map(e -> (JSONObject) e)
+                .forEach(e -> {
+                    String key = RANK_CACHE_KEY_TEMPLATE.formatted(today, queryContent, e.getInt("Rank"));
+                    String value = e.getStr("CharacterName");
+                    redisUtil.valueSet(key, value, Duration.ofHours(6));
+                });
+
+        JSONObject targetCharacter = queryResultList.getJSONObject(0);
+        return targetCharacter.getStr("CharacterName");
     }
 }

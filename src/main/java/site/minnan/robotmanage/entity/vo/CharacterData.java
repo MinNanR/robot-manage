@@ -72,9 +72,9 @@ public class CharacterData {
      * 无排名信息时，使用默认排名信息
      */
     public void setRankEmpty() {
-        this.serverClassRanking = "-";
-        this.serverRank = "-";
-        this.classRank = "-";
-        this.globalRanking = "-";
+        this.serverClassRank = "-";
+        this.serverLevelRank = "-";
+        this.globalClassRank = "-";
+        this.globalLevelRank = "-";
     }
 }

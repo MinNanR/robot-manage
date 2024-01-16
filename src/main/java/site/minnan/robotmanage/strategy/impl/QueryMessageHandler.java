@@ -1,6 +1,8 @@
 package site.minnan.robotmanage.strategy.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import jakarta.persistence.EntityNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
 import site.minnan.robotmanage.entity.vo.CharacterData;
@@ -16,6 +18,7 @@ import java.util.Optional;
  * @author Minnan on 2024/01/15
  */
 @Service("query")
+@Slf4j
 public class QueryMessageHandler implements MessageHandler {
 
 
@@ -35,7 +38,22 @@ public class QueryMessageHandler implements MessageHandler {
     public Optional<String> handleMessage(MessageDTO dto) {
         String message = dto.getRawMessage();
         String queryContent = message.substring(2);
-        CharacterData c = characterSupportService.fetchCharacterInfo(queryContent);
+        String queryTarget;
+        try {
+            queryTarget = characterSupportService.parseQueryContent(queryContent, dto.getSender().userId());
+            log.info("查询内容为[{}]，解析出查询目标为：[{}]", queryContent, queryTarget);
+        } catch (EntityNotFoundException e) {
+            log.warn("解析查询内容失败，查询内容为{}", queryContent);
+            return Optional.of("查询失败");
+        }
+
+        CharacterData c;
+        try {
+            c = characterSupportService.fetchCharacterInfo(queryTarget);
+        } catch (Exception e) {
+            log.error("查询角色信息失败，查询目标为"+ queryTarget, e);
+            return Optional.of("查询失败");
+        }
 
         StringBuilder sb = new StringBuilder();
         String baseInfo = """
@@ -50,14 +68,6 @@ public class QueryMessageHandler implements MessageHandler {
         sb.append(baseInfo)
                 .append("---------------------------------\n");
         if (c.getAchievementPoints() != null) {
-//            String achievementInfo = """
-//                    成就值:%s（排名：%s）
-//                    联盟等级:%s（排名：%s）
-//                    联盟战斗力:%s（每日%s币）
-//                    """
-//                    .formatted(c.getAchievementPoints(), c.getAchievementRank(),
-//                            c.getLegionLevel(), c.getLegionRank(),
-//                            c.getLegionPower(), c.getLegionCoinsPerDay());
             String achievementInfo = "成就值:%s（排名：%s）".formatted(c.getAchievementPoints(), c.getAchievementRank());
             sb.append(achievementInfo).append("\n");
         }

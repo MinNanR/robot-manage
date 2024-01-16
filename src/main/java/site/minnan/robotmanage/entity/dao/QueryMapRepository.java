@@ -14,5 +14,6 @@ import site.minnan.robotmanage.entity.aggregate.QueryMap;
 @Repository
 public interface QueryMapRepository extends JpaRepository<QueryMap, Integer>, JpaSpecificationExecutor<QueryMap> {
 
+    QueryMap findByQueryContent(String queryContent);
 
 }

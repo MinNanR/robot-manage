@@ -1,5 +1,6 @@
 package site.minnan.robotmanage.service;
 
+import jakarta.persistence.EntityNotFoundException;
 import site.minnan.robotmanage.entity.vo.CharacterData;
 
 /**
@@ -24,4 +25,12 @@ public interface CharacterSupportService {
      * @return
      */
     String parseQueryContent(String queryContent, String userId);
+
+    /**
+     * 排名查询角色
+     *
+     * @param queryMessage
+     * @return
+     */
+    String rankQueryCharacter(String queryMessage) throws EntityNotFoundException;
 }

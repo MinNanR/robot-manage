@@ -65,7 +65,7 @@ public class DivinateMessageHandler implements MessageHandler {
      * @return
      */
     @Override
-    @Cacheable(value = "divination", keyGenerator = "DivinateKeyGenerator")
+    @Cacheable(value = "divination", keyGenerator = "divinateKeyGenerator")
     public Optional<String> handleMessage(MessageDTO dto) {
         DateTime now = DateTime.now();
         //获取当前微秒时间戳
@@ -166,7 +166,6 @@ public class DivinateMessageHandler implements MessageHandler {
         //在选定的频道列表里随机一个
         Integer luckChannel = RandomUtil.randomEle(targetChannelList);
         return new ChannelRollResult(luckChannel, channelTrigramMap.get(luckChannel));
-
     }
 
     private record ChannelRollResult(Integer channel, Integer trigramIndex) {

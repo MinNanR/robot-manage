@@ -35,7 +35,12 @@ public class BotServiceImpl implements BotService {
     @Override
     public BotReply handleMessage(MessageDTO dto) {
         MessageHandler messageHandler = messageHandlerSupportService.judgeMessageHandler(dto);
-        Optional<String> resultOption = messageHandler.handleMessage(dto);
+        Optional<String> resultOption = Optional.empty();
+        try {
+            resultOption = messageHandler.handleMessage(dto);
+        } catch (Exception e) {
+            log.info("处理消息异常", e);
+        }
         String message = resultOption.orElse(fallBackMessage());
         return BotReply.of(0, message);
     }
