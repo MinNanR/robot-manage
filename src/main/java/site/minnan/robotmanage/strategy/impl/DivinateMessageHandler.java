@@ -93,7 +93,7 @@ public class DivinateMessageHandler implements MessageHandler {
         }
         //占卜一个频道
         ChannelRollResult channelRollResult = rollChannel(microsecond);
-        String channelMsg = StrUtil.format("今日幸运频道：{}（幸运指数：{}）", channelRollResult.channel, trigramList[channelRollResult.trigramIndex]);
+        String channelMsg = "今日幸运频道：%s（幸运指数：%s）".formatted(channelRollResult.channel, trigramList[channelRollResult.trigramIndex]);
         sb.append(channelMsg);
 
         return Optional.of(sb.toString());
@@ -130,29 +130,13 @@ public class DivinateMessageHandler implements MessageHandler {
     private ChannelRollResult rollChannel(String microsecond) {
         int microsecondLen = microsecond.length();
         //储存每条线占卜结果
-        Map<Integer, Integer> channelTrigramMap = new HashMap<>();
-        //频道迭代器
-        Iterator<Integer> channelItr = Stream.iterate(1, i -> i + 1).limit(40).iterator();
-        while (channelItr.hasNext()) {
-            Integer channel = channelItr.next();
-            //随机盐
-            int saltStep = RandomUtil.randomInt(0, 120);
-            //时间盐
-            int secStep = Integer.valueOf(microsecond.charAt(channel % microsecondLen));
-            saltStep = Math.max(saltStep, 1);
-            secStep = Math.max(secStep, 1);
-            //计算这个频道的占卜结果索引
-            int trigramIndex = ((secStep - 1) + (saltStep - 1)) % trigramList.length;
-            channelTrigramMap.put(channel, trigramIndex);
-        }
-
-        //按占卜结果索引分组
-        Map<Integer, List<Integer>> rollResultMap = channelTrigramMap.entrySet().stream()
-                .collect(Collectors.groupingBy(Map.Entry::getValue,
-                        Collectors.mapping(Map.Entry::getKey, Collectors.toList())));
+        Map<Integer, List<ChannelRollResult>> rollResultMap = Stream
+                .iterate(1, i -> i + 1).limit(40)//迭代40个频道
+                .map(channel -> channelTest(channel, microsecond))//对频道进行六爻起卦
+                .collect(Collectors.groupingBy(e -> e.trigramIndex));//按爻象下标分组
 
         //选取占卜结果为吉的频道，按大安，速喜，小吉顺序选取
-        List<Integer> targetChannelList;
+        List<ChannelRollResult> targetChannelList;
         if (rollResultMap.containsKey(0)) {
             targetChannelList = rollResultMap.get(0);
         } else if (rollResultMap.containsKey(2)) {
@@ -164,8 +148,26 @@ public class DivinateMessageHandler implements MessageHandler {
             return rollChannel(microsecond);
         }
         //在选定的频道列表里随机一个
-        Integer luckChannel = RandomUtil.randomEle(targetChannelList);
-        return new ChannelRollResult(luckChannel, channelTrigramMap.get(luckChannel));
+        return RandomUtil.randomEle(targetChannelList);
+    }
+
+    /**
+     * 对频道进行占卜测试
+     *
+     * @param channel     频道
+     * @param microsecond 时间戳
+     * @return 测试结果
+     */
+    private ChannelRollResult channelTest(Integer channel, String microsecond) {
+        //随机盐
+        int saltStep = RandomUtil.randomInt(0, 120);
+        //时间盐
+        int secStep = Integer.valueOf(microsecond.charAt(channel % microsecond.length()));
+        saltStep = Math.max(saltStep, 1);
+        secStep = Math.max(secStep, 1);
+        //计算这个频道的爻象结果索引
+        int trigramIndex = ((secStep - 1) + (saltStep - 1)) % trigramList.length;
+        return new ChannelRollResult(channel, trigramIndex);
     }
 
     private record ChannelRollResult(Integer channel, Integer trigramIndex) {
