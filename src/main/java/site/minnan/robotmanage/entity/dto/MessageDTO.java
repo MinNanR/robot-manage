@@ -25,7 +25,7 @@ public class MessageDTO {
         MessageDTO dto = new MessageDTO();
         dto.messageId = json.getStr("message_id");
         dto.groupId = json.getStr("group_id");
-        dto.rawMessage = json.getStr("raw_message").substring(1);
+        dto.rawMessage = json.getStr("raw_message").substring(1).strip();
         dto.sender = new User((String) json.getByPath("sender.user_id"));
         return dto;
     }
