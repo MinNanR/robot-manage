@@ -33,4 +33,13 @@ public interface CharacterSupportService {
      * @return
      */
     String rankQueryCharacter(String queryMessage) throws EntityNotFoundException;
+
+    /**
+     * 查询用户今日查询某个角色的次数
+     *
+     * @param target 查询母包
+     * @param userId 用户id
+     * @return
+     */
+    int getQueryCount(String target, String userId);
 }

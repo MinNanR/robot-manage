@@ -81,13 +81,15 @@ public class ExpQueryMessageHandler implements MessageHandler {
             return Optional.of(sb.toString());
         }
 
-        expData = expData.stream()
-                .sorted(Comparator.comparing(ExpData::dateLabel))
-                .limit(14)
-                .toList();
+        expData = expData.subList(expData.size() - 14, expData.size());
         expData.stream()
                 .map(e -> "%s：%s\n".formatted(e.dateLabel(), e.formatExpDifference()))
                 .forEachOrdered(sb::append);
+
+        int queryCount = characterSupportService.getQueryCount(queryTarget, dto.getSender().userId());
+        if (queryCount >= 3) {
+            sb.append("[CQ:image,file=https://minnan.site:2005/rot/20240118/toomuch.jpg,subType=0]");
+        }
 
         return Optional.of(sb.toString());
     }

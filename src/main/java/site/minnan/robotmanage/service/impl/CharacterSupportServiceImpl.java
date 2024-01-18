@@ -3,6 +3,7 @@ package site.minnan.robotmanage.service.impl;
 import cn.hutool.core.codec.Base64;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.convert.NumberChineseFormatter;
+import cn.hutool.core.date.DateField;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.lang.Console;
 import cn.hutool.core.util.NumberUtil;
@@ -19,6 +20,8 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import site.minnan.robotmanage.entity.aggregate.Nick;
@@ -30,10 +33,12 @@ import site.minnan.robotmanage.entity.vo.ExpData;
 import site.minnan.robotmanage.infrastructure.utils.RedisUtil;
 import site.minnan.robotmanage.service.CharacterSupportService;
 
-import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Stack;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -57,6 +62,10 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
 
     private NickRepository nickRepository;
 
+    @Autowired
+    @Qualifier("proxy")
+    private Proxy proxy;
+
     public CharacterSupportServiceImpl(QueryMapRepository queryMapRepository, NickRepository nickRepository, RedisUtil redisUtil) {
         this.queryMapRepository = queryMapRepository;
         this.nickRepository = nickRepository;
@@ -73,8 +82,6 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
     @Cacheable(value = "query", keyGenerator = "queryKeyGenerator")
     public CharacterData fetchCharacterInfo(String queryName) {
         String queryUrl = BASE_QUERY_URL + queryName.strip();
-
-        Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("127.0.0.1", 2334));
 
         HttpRequest queryRequest = HttpUtil.createGet(queryUrl).setProxy(proxy);
         HttpResponse queryRes = queryRequest.execute();
@@ -231,7 +238,8 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         while (dateItr.hasNext() && expItr.hasNext()) {
             String date = dateItr.next();
             String exp = expItr.next();
-            ExpData expData = new ExpData(date, Long.parseLong(exp));
+            long expNumber = NumberUtil.isNumber(exp) ? Long.parseLong(exp) : 0;
+            ExpData expData = new ExpData(date, expNumber);
             expDataList.add(expData);
         }
 
@@ -304,5 +312,26 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
 
         JSONObject targetCharacter = queryResultList.getJSONObject(0);
         return targetCharacter.getStr("CharacterName");
+    }
+
+    /**
+     * 查询用户今日查询某个角色的次数
+     *
+     * @param target 查询母包
+     * @param userId 用户id
+     * @return
+     */
+    public int getQueryCount(String target, String userId) {
+        String today = DateTime.now().offset(DateField.HOUR, -8).toString("yyyyMMdd");
+        String key = "queryCount:%s:%s:%s".formatted(today, userId, target);
+        int count;
+        if (redisUtil.hasKey(key)) {
+            count = (Integer) redisUtil.getValue(key);
+        } else {
+            count = 0;
+        }
+        count++;
+        redisUtil.valueSet(key, count, Duration.ofDays(1L));
+        return count;
     }
 }

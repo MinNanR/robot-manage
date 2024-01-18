@@ -92,6 +92,11 @@ public class QueryMessageHandler implements MessageHandler {
             }
         }
 
+        int queryCount = characterSupportService.getQueryCount(queryTarget, dto.getSender().userId());
+        if (queryCount >= 3) {
+            sb.append("[CQ:image,file=https://minnan.site:2005/rot/20240118/toomuch.jpg,subType=0]");
+        }
+
         return Optional.of(sb.toString());
     }
 }
