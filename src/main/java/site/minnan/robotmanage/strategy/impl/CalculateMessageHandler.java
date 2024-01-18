@@ -7,6 +7,8 @@ import site.minnan.robotmanage.entity.dto.MessageDTO;
 import site.minnan.robotmanage.strategy.MessageHandler;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
@@ -31,7 +33,7 @@ public class CalculateMessageHandler implements MessageHandler {
         operateMap.put("+", BigDecimal::add);
         operateMap.put("-", BigDecimal::subtract);
         operateMap.put("*", BigDecimal::multiply);
-        operateMap.put("/", BigDecimal::divide);
+        operateMap.put("/", (operand1, operand2) -> operand1.divide(operand2,6, RoundingMode.HALF_UP));
         operateMap.put("mod", (operand1, operand2) -> operand1.divideAndRemainder(operand2)[1]);
 
         operatorPriority = new HashMap<>();
