@@ -12,4 +12,8 @@ public interface QuestionRepository extends JpaRepository<Question, Integer>, Jp
 
     List<Question> findAllByContentLikeIgnoreCase(String content);
 
+    List<Question> findAllByContentLikeIgnoreCaseAndGroupId(String content, String groupId);
+
+    Question findByContentIgnoreCaseAndGroupId(String content, String groupId);
+
 }

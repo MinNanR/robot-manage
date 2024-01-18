@@ -17,4 +17,6 @@ public interface AnswerRepository extends JpaRepository<Answer, Integer>, JpaSpe
      * @return
      */
     List<Answer> findAnswerByQuestionIdIn(Collection<Integer> questions);
+
+    void deleteByQuestionId(Integer questionId);
 }

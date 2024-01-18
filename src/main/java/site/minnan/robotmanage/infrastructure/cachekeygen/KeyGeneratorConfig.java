@@ -1,5 +1,6 @@
 package site.minnan.robotmanage.infrastructure.cachekeygen;
 
+import cn.hutool.core.date.DateField;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.util.StrUtil;
 import org.hibernate.annotations.Bag;
@@ -49,7 +50,7 @@ public class KeyGeneratorConfig {
             if (params.length == 0) {
                 return SimpleKey.EMPTY;
             }
-            String today = DateTime.now().toString("yyyyMMdd");
+            String today = DateTime.now().offset(DateField.HOUR, -8).toString("yyyyMMdd");
             Object param = params[0];
             if (param instanceof String queryName) {
                 return "%s:%s".formatted(today, queryName);

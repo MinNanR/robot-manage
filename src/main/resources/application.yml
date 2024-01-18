@@ -8,6 +8,7 @@ spring:
       static-locations: classpath:/vendor
   datasource:
     url: jdbc:sqlite:F:/Minnan/robot-manage/robot.db
+#    url: jdbc:sqlite:/home/minnan/robot-manage/robot.db
     driver-class-name: org.sqlite.JDBC
   jpa:
     hibernate:
@@ -20,10 +21,6 @@ spring:
       port: 6379
       database: 2
       password: minnan
-
-
-
-
 
 #    database-platform: org.hibernate.community.dialect.SQLiteDialect
 

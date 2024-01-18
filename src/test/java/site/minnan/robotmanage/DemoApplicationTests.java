@@ -1,6 +1,5 @@
 package site.minnan.robotmanage;
 
-import cn.hutool.core.convert.NumberChineseFormatter;
 import cn.hutool.core.lang.Console;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.json.JSONObject;
@@ -12,8 +11,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import site.minnan.robotmanage.entity.aggregate.Question;
 import site.minnan.robotmanage.entity.dao.QuestionRepository;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
+import site.minnan.robotmanage.infrastructure.utils.RedisUtil;
 import site.minnan.robotmanage.service.CharacterSupportService;
-import site.minnan.robotmanage.service.impl.CharacterSupportServiceImpl;
 import site.minnan.robotmanage.strategy.MessageHandler;
 
 import java.util.List;
@@ -26,11 +25,14 @@ class DemoApplicationTests {
     QuestionRepository questionRepository;
 
     @Autowired
-    @Qualifier("stirUp")
+    @Qualifier("question")
     MessageHandler messageHandler;
 
     @Autowired
     CharacterSupportService characterSupportService;
+
+    @Autowired
+    RedisUtil redisUtil;
 
     @Test
     void contextLoads() {
@@ -101,9 +103,47 @@ class DemoApplicationTests {
     }
 
     @Test
-    public void testStirUp(){
+    public void testStirUp() {
         Optional<String> s = messageHandler.handleMessage(null);
         System.out.println(s.orElse("占卜失败"));
+    }
+
+    @Test
+    public void testReckonSac() {
+        MessageDTO dto = initParam("sac 1岛11级0 2岛10级100 3岛8级100");
+        Optional<String> s = messageHandler.handleMessage(dto);
+        System.out.println(s.orElse("异常"));
+    }
+
+    @Test
+    public void testMenu() {
+        MessageDTO dto = initParam("吃点什么 肯德基 麦当劳");
+        Optional<String> s = messageHandler.handleMessage(dto);
+        System.out.println(s.orElse("异常"));
+    }
+
+    @Test
+    public void testCalculate() {
+        MessageDTO dto = initParam("130*5%");
+        Optional<String> s = messageHandler.handleMessage(dto);
+        System.out.println(s.orElse("计算错误"));
+    }
+
+    @Test
+    public void addRedisData() {
+        redisUtil.valueSet("endpoint_", "oss-cn-shenzhen.aliyuncs.com");
+        redisUtil.valueSet("accessKeySecret_", "wg19lYs9oFHdX5EYUy5wEBdxo3Wina");
+        redisUtil.valueSet("accessKeyId_", "LTAI4G7FmUSUc9kLteR3DuKr");
+    }
+
+    @Test
+    public void testQuestionHandle() {
+//        MessageDTO param = initParam("添加问题测试答[CQ:image,file={E91E5B6B-170F-8FE4-E253-7D3B06F56C57}.image,subType=0,url=https://gchat.qpic.cn/gchatpic_new/931437070/931437070-2233222014-E91E5B6B170F8FE4E2537D3B06F56C57/0?vuin=1527761310&term=0&is_origin=2&is_ntv2=1]");
+//        MessageDTO param = initParam("模糊查询问题测");
+//        MessageDTO param = initParam("删除答案820");
+        MessageDTO param = initParam("删除问题523");
+        Optional<String> s = messageHandler.handleMessage(param);
+        System.out.println(s.orElse("异常"));
     }
 
     public static void main(String[] args) {

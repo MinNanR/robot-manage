@@ -1,10 +1,7 @@
 package site.minnan.robotmanage.entity.aggregate;
 
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Data;
 
 @Data
@@ -14,6 +11,7 @@ public class HandlerStrategy {
 
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     /**
