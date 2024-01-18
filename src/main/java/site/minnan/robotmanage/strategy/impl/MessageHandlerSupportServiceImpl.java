@@ -1,27 +1,22 @@
 package site.minnan.robotmanage.strategy.impl;
 
-import cn.hutool.core.util.ClassUtil;
 import cn.hutool.core.util.ReUtil;
-import cn.hutool.core.util.ReflectUtil;
-import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
+import site.minnan.robotmanage.entity.aggregate.Auth;
 import site.minnan.robotmanage.entity.aggregate.HandlerStrategy;
+import site.minnan.robotmanage.entity.dao.AuthRepository;
 import site.minnan.robotmanage.entity.dao.StrategyRepository;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
 import site.minnan.robotmanage.strategy.MessageHandler;
 import site.minnan.robotmanage.strategy.MessageHandlerSupportService;
 
-import java.io.IOException;
-import java.net.URL;
-import java.util.*;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 /**
  * 消息处理器判定服务
@@ -34,12 +29,15 @@ public class MessageHandlerSupportServiceImpl implements MessageHandlerSupportSe
 
     private StrategyRepository strategyRepository;
 
+    private AuthRepository authRepository;
+
     private ApplicationContext applicationContext;
 
     private static final String DEFAULT_HANDLER_NAME = "default";
 
-    public MessageHandlerSupportServiceImpl(StrategyRepository strategyRepository) {
+    public MessageHandlerSupportServiceImpl(StrategyRepository strategyRepository, AuthRepository authRepository) {
         this.strategyRepository = strategyRepository;
+        this.authRepository = authRepository;
     }
 
     @Override
@@ -57,21 +55,36 @@ public class MessageHandlerSupportServiceImpl implements MessageHandlerSupportSe
         List<HandlerStrategy> strategyList = strategyRepository.getAllByEnabledIsOrderByOrdinal(1);
         String rawMessage = dto.getRawMessage().toLowerCase();
         String messageId = dto.getMessageId();
+        String groupId = dto.getGroupId();
+        String userId = dto.getSender().userId();
+        Auth authObj = authRepository.findByUserIdAndGroupId(userId, groupId);
+        int auth = authObj == null ? 0 : authObj.getAuthNumber();
+        //用户被禁止使用
+        if (((auth >> 6 & 1) ^ 1) == 0) {
+            return e -> Optional.of("当前用户无使用权限");
+        }
 
         for (HandlerStrategy strategy : strategyList) {
             Integer expressionType = strategy.getExpressionType();
             String expression = strategy.getExpression();
             String componentName = strategy.getComponentName();
-            // TODO: 2024/01/12 权限判定
+            Integer authMask = strategy.getAuthMask();
+
             if (expressionType == 1 && Objects.equals(expression, rawMessage)) {
+                if ((auth & authMask) != 0) {
+                    continue;
+                }
                 log.info("消息[{}]全匹配命中处理策略[{}]", messageId, strategy.getStrategyName());
                 return applicationContext.getBean(componentName, MessageHandler.class);
             } else if (expressionType == 2 && ReUtil.isMatch(expression, rawMessage)) {
+                if ((auth & authMask) != 0) {
+                    continue;
+                }
                 log.info("消息[{}]正则命中处理策略[{}]", messageId, strategy.getStrategyName());
                 return applicationContext.getBean(componentName, MessageHandler.class);
             }
         }
-        log.info("消息[{}]未命中处理策略，将使用默认处理策略" , messageId);
+        log.info("消息[{}]未命中处理策略，将使用默认处理策略", messageId);
         return applicationContext.getBean(DEFAULT_HANDLER_NAME, MessageHandler.class);
     }
 
