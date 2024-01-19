@@ -60,7 +60,6 @@ public class CalculateMessageHandler implements MessageHandler {
         List<ExpressionItem> suffixExpression = new ArrayList<>();
 
         Supplier<String> top = operatorStack::peek;
-        Supplier<String> secondTop = () -> operatorStack.elementAt(operatorStack.size() - 2);
 
         int i = 0;
         if (formula.charAt(i) == '-') {
@@ -103,8 +102,8 @@ public class CalculateMessageHandler implements MessageHandler {
                     operatorStack.push(s);
                 } else {
                     while (!operatorStack.isEmpty()
-                            && operatorPriority.get(s) <= operatorPriority.get(secondTop.get())
-                            && "(".equals(secondTop.get())) {
+                            && operatorPriority.get(s) <= operatorPriority.get(top.get())
+                            && "(".equals(top.get())) {
                         String operator = operatorStack.pop();
                         suffixExpression.add(new ExpressionItem(operator));
                     }

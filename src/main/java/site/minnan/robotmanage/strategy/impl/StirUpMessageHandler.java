@@ -28,7 +28,7 @@ public class StirUpMessageHandler implements MessageHandler {
         this.trigramRepository = trigramRepository;
     }
 
-    private static final String PIC_URL_TEMPLATE = "[CQ:image,file=https://minnan.site:2005/trigram/trigram/%s.png,subType=0]";
+    private static final String PIC_URL_TEMPLATE = "[CQ:image,file=https://minnan.site:2005/rot/trigram/trigram/%s.png,subType=0]";
 
     private TrigramRepository trigramRepository;
 

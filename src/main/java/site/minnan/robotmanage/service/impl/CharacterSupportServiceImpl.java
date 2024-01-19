@@ -140,26 +140,33 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
             characterData.setGlobalLevelRank(characterRank.getStr(1).replace(",", ""));
         }
 
-        //解析成就信息
-        Elements achievementRankEles = doc.selectXpath("/html/body/main/div/div/div[2]/div[2]/div[1]/div[3]/ul/li[1]/span");
-        if (!achievementRankEles.isEmpty()) {
-            String achievementRank = achievementRankEles.get(0).text();
-            String achievementPoint = getText.apply("/html/body/main/div/div/div[2]/div[2]/div[1]/div[3]/ul/li[3]/span");
-            characterData.setAchievementRank(achievementRank);
-            characterData.setAchievementPoints(achievementPoint);
+        try {
+            //解析成就信息
+            Elements achievementRankEles = doc.selectXpath("/html/body/main/div/div/div[2]/div[2]/div[1]/div[3]/ul/li[1]/span");
+            if (!achievementRankEles.isEmpty()) {
+                String achievementRank = achievementRankEles.get(0).text();
+                String achievementPoint = getText.apply("/html/body/main/div/div/div[2]/div[2]/div[1]/div[3]/ul/li[3]/span");
+                characterData.setAchievementRank(achievementRank);
+                characterData.setAchievementPoints(achievementPoint);
+            }
+        } catch (Exception ignored) {
         }
 
-        //解析联盟信息
-        Elements legionRankEles = doc.selectXpath("/html/body/main/div/div/div[2]/div[2]/div[1]/div[2]/ul/li[1]/span");
-        if (!legionRankEles.isEmpty()) {
-            String legionRank = legionRankEles.get(0).text();
-            String legionLv = getText.apply("/html/body/main/div/div/div[2]/div[2]/div[1]/div[2]/ul/li[2]/span");
-            Element legionPowerEle = doc.selectXpath("/html/body/main/div/div/div[2]/div[2]/div[1]/div[2]/ul/li[3]/span/input").get(0);
-            Element legionCoinsEle = doc.selectXpath("/html/body/main/div/div/div[2]/div[2]/div[1]/div[2]/ul/li[4]/div[2]/span[3]/input").get(0);
-            characterData.setLegionLevel(legionLv);
-            characterData.setLegionRank(legionRank);
-            characterData.setLegionPower(legionPowerEle.attr("value").replaceAll(",", ""));
-            characterData.setLegionCoinsPerDay(legionCoinsEle.attr("value").replace(",", ""));
+        try {
+            //解析联盟信息
+            Elements legionRankEles = doc.selectXpath("/html/body/main/div/div/div[2]/div[2]/div[1]/div[2]/ul/li[1]/span");
+            if (!legionRankEles.isEmpty()) {
+                String legionRank = legionRankEles.get(0).text();
+                String legionLv = getText.apply("/html/body/main/div/div/div[2]/div[2]/div[1]/div[2]/ul/li[2]/span");
+                Element legionPowerEle = doc.selectXpath("/html/body/main/div/div/div[2]/div[2]/div[1]/div[2]/ul/li[3]/span/input").get(0);
+                Element legionCoinsEle = doc.selectXpath("/html/body/main/div/div/div[2]/div[2]/div[1]/div[2]/ul/li[4]/div[2]/span[3]/input").get(0);
+                characterData.setLegionLevel(legionLv);
+                characterData.setLegionRank(legionRank);
+                characterData.setLegionPower(legionPowerEle.attr("value").replaceAll(",", ""));
+                characterData.setLegionCoinsPerDay(legionCoinsEle.attr("value").replace(",", ""));
+            }
+        } catch (Exception ignored){
+
         }
 
         List<String> expSearch = ReUtil.findAllGroup0("const zmChs=function\\(a\\)", html);
