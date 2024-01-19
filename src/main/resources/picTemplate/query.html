@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<meta charset="utf-8" />
+<link href="pure-min.css" rel="stylesheet"/>
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <style>
+        .head-box {
+            background-color: #292929;
+            /*border: solid black;*/
+            color: #f3f3f3;;
+        }
+
+        .content-box {
+            background-color: #222222;
+            color: #f3f3f3;;
+        }
+
+        .flex-box {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+        }
+
+        .padding-20 {
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+
+        .rank-box {
+            background-color: #313131;
+            margin-top: 10px;
+            padding-left: 10px;
+            padding-right: 10px;
+            padding-top: 5px;
+            padding-bottom: 5px;
+        }
+
+    </style>
+    <script src="https://minnan.site/resource/echarts.js"></script>
+</head>
+<body style="background-color:#3b3b3b;">
+<!--<body>-->
+<div class="pure-g" id="main">
+    <div class="pure-u-4-24" style="padding: 10px 10px 10px 20px">
+        <div style="margin-top: 5px;text-align: center;vertical-align: middle;line-height: 30px" class="head-box">
+            <span th:text="${c.getName()}">CoderMinnan</span>
+        </div>
+        <div style="margin-top:5px;text-align: center;vertical-align: middle;line-height: 30px;padding-top: 10px;padding-bottom: 10px"
+             class="content-box">
+            <img th:src="${c.getCharacterImgUrl()}" style="width: 70%"/>
+            <div>
+                <span th:text="'Lv.' + ${c.getLevel()} + '(' + ${c.getExpPercent()} + ')'"></span>
+                <span th:text="${c.getJob()}"></span>
+                <span th:text="${c.getServer()}"></span>
+            </div>
+            <div class="flex-box padding-20">
+                <div>区职业排名</div>
+                <div th:text="${c.getServerClassRank()}">-</div>
+            </div>
+            <div class="flex-box padding-20">
+                <div>服务器职业排名</div>
+                <div th:text="${c.getGlobalClassRank()}">-</div>
+            </div>
+            <div class="flex-box padding-20">
+                <div>区总排名</div>
+                <div th:text="${c.getServerLevelRank()}">-</div>
+            </div>
+            <div class="flex-box padding-20">
+                <div>服务器总排名</div>
+                <div th:text="${c.getGlobalLevelRank()}">-</div>
+            </div>
+        </div>
+        <div style="margin-top: 5px;text-align: center;vertical-align: middle;line-height: 30px" class="head-box">
+            <span>联盟</span>
+        </div>
+        <div th:if="${c.getLegionLevel() != null}" style="margin-top:5px;text-align: center;vertical-align: middle;line-height: 30px;padding-top: 10px;padding-bottom: 10px"
+             class="content-box">
+            <div class="flex-box padding-20">
+                <div>联盟等级</div>
+                <div th:text="${c.getLegionLevel()}">-</div>
+            </div>
+            <div class="flex-box padding-20">
+                <div>联盟战斗力</div>
+                <div th:text="${c.parseLegionPower()}">-</div>
+            </div>
+            <div class="flex-box padding-20">
+                <div>联盟排名</div>
+                <div th:text="${c.getLegionRank()}"></div>
+            </div>
+            <div class="flex-box padding-20">
+                <div>每日联盟币</div>
+                <div th:text="${c.getLegionCoinsPerDay()}"></div>
+            </div>
+            <div th:if="${c.getAchievementPoints() != null}" class="flex-box padding-20">
+                <div>成就值</div>
+                <div th:text="${c.getAchievementPoints()}"></div>
+            </div>
+        </div>
+
+    </div>
+    <div class="pure-u-12-24" style="padding: 10px 10px 10px 5px">
+        <div style="margin-top: 5px;text-align: center;vertical-align: middle;line-height: 30px" class="head-box">
+            <span>每日经验获取</span>
+        </div>
+        <div style="margin-top: 5px">
+            <!--            <img src="exp.png" style="width: 100%;height: 290px;">-->
+            <div id="exp" style="width: 100%;height: 290px;" class="content-box">
+
+            </div>
+        </div>
+        <div style="display: flex;flex-direction: row; margin-top: 5px;">
+            <div class="content-box" style="width: 49%;padding-top: 10px;padding-bottom: 10px;">
+                <div class="flex-box padding-20">
+                    <div>7日总经验</div>
+                    <div th:text="${sum7} + 'b'">0b</div>
+                </div>
+                <div class="flex-box padding-20">
+                    <div>7日日均经验</div>
+                    <div th:text="${avg7}"></div>
+                </div>
+            </div>
+            <div class="content-box" style="width: 50%;margin-left: 5px;padding-top: 10px;padding-bottom: 10px;">
+                <div class="flex-box padding-20">
+                    <div>14日总经验</div>
+                    <div th:text="${sum14}">0b</div>
+                </div>
+                <div class="flex-box padding-20">
+                    <div>14日日均经验</div>
+                    <div th:text="${avg14}"></div>
+                </div>
+            </div>
+        </div>
+        <div style="margin-top: 5px;text-align: center;vertical-align: middle;line-height: 30px" class="head-box">
+            <span>详细每日经验获取</span>
+        </div>
+        <div style="display: flex;flex-direction: row;margin-top: 5px;">
+            <div class="content-box" style="width: 33%;padding-top: 20px;padding-bottom: 20px;text-align: center">
+                <div th:each="expItem: ${exp1}" style="line-height: 1.7" th:text="${expItem.dateLabel() + ':' + expItem.formatExpDifference()}">
+
+                </div>
+<!--                <div style="line-height: 1.7">1/3: 3425.7709b</div>-->
+<!--                <div style="line-height: 1.7">1/4: 3425.7709b</div>-->
+<!--                <div style="line-height: 1.7">1/5: 3425.7709b</div>-->
+<!--                <div style="line-height: 1.7">1/6: 3425.7709b</div>-->
+<!--                <div style="line-height: 1.7">1/7: 3425.7709b</div>-->
+            </div>
+            <div class="content-box"
+                 style="width: 33%;padding-top: 20px;padding-bottom: 20px;text-align: center;margin-left: 5px;">
+                <div th:each="expItem: ${exp2}" style="line-height: 1.7" th:text="${expItem.dateLabel() + ':' + expItem.formatExpDifference()}">
+
+                </div>
+<!--                <div style="line-height: 1.7">1/8: 3425.7709b</div>-->
+<!--                <div style="line-height: 1.7">1/9: 3425.7709b</div>-->
+<!--                <div style="line-height: 1.7">1/10: 3425.7709b</div>-->
+<!--                <div style="line-height: 1.7">1/11: 3425.7709b</div>-->
+<!--                <div style="line-height: 1.7">1/12: 3425.7709b</div>-->
+            </div>
+            <div class="content-box"
+                 style="width: 33%;padding-top: 20px;padding-bottom: 20px;text-align: center;margin-left: 5px;">
+                <div th:each="expItem: ${exp3}" style="line-height: 1.7" th:text="${expItem.dateLabel() + ':' + expItem.formatExpDifference()}">
+
+                </div>
+<!--                <div style="line-height: 1.7">1/13: 3425.7709b</div>-->
+<!--                <div style="line-height: 1.7">1/14: 3425.7709b</div>-->
+<!--                <div style="line-height: 1.7">1/15: 3425.7709b</div>-->
+<!--                <div style="line-height: 1.7">1/16: 3425.7709b</div>-->
+            </div>
+        </div>
+    </div>
+    <div class="pure-u-6-24" style="padding: 10px 10px 10px 5px">
+        <div style="margin-top: 5px;text-align: center;vertical-align: middle;line-height: 30px" class="head-box">
+            <span>附近职业排名</span>
+        </div>
+        <div style="margin-top:5px;text-align: center;vertical-align: middle;line-height: 30px;padding-top: 10px;padding-bottom: 10px;padding-left: 10px;padding-right: 10px;"
+             class="content-box">
+            <div th:each="n :${c.nearRank}" class="flex-box padding-20 rank-box">
+                <div th:text="${n.getServerClassRank()} + '.' + ${n.getName()}"></div>
+                <div th:text="'Lv.' + ${n.getLevel()} + '(' + ${n.getExpPercent()} + ')'"></div>
+            </div>
+<!--            <div class="flex-box padding-20 rank-box">-->
+<!--                <div>66.CoderMinnan</div>-->
+<!--                <div>Lv.281(99.9%)</div>-->
+<!--            </div>-->
+<!--            <div class="flex-box padding-20 rank-box">-->
+<!--                <div>66.CoderMinnan</div>-->
+<!--                <div>Lv.281(99.9%)</div>-->
+<!--            </div>-->
+<!--            <div class="flex-box padding-20 rank-box">-->
+<!--                <div>66.CoderMinnan</div>-->
+<!--                <div>Lv.281(99.9%)</div>-->
+<!--            </div>-->
+<!--            <div class="flex-box padding-20 rank-box">-->
+<!--                <div>66.CoderMinnan</div>-->
+<!--                <div>Lv.281(99.9%)</div>-->
+<!--            </div>-->
+<!--            <div class="flex-box padding-20 rank-box">-->
+<!--                <div>66.CoderMinnan</div>-->
+<!--                <div>Lv.281(99.9%)</div>-->
+<!--            </div>-->
+        </div>
+        <div style="margin-top: 5px;text-align: center;vertical-align: middle;line-height: 30px" class="head-box">
+            <span>升级日程预测</span>
+        </div>
+        <div class="content-box"
+             style="padding-top: 20px;padding-bottom: 10px;text-align: center;margin-top: 5px;">
+            <div style="line-height: 1.5" th:each="p:${levelPredicate}" th:text="${p.lv} + ':' + ${p.dateLabel}" ></div>
+<!--            <div style="line-height: 1.5">282:2024-01-20</div>-->
+            <!--            <div style="line-height: 1.5">283:2024-03-07</div>-->
+            <!--            <div style="line-height: 1.5">284:2024-04-27</div>-->
+            <!--            <div style="line-height: 1.5">285:2024-06-22</div>-->
+            <!--            <div style="line-height: 1.5">286:2024-10-13</div>-->
+            <!--            <div style="line-height: 1.5">287:2025-02-15</div>-->
+            <!--            <div style="line-height: 1.5">288:2025-07-02</div>-->
+            <!--            <div style="line-height: 1.5">289:2025-11-30</div>-->
+            <!--            <div style="line-height: 1.5">290:2026-05-15</div>-->
+            <!--            <div style="line-height: 1.5">291:2027-04-14</div>-->
+        </div>
+    </div>
+</div>
+</body>
+<script th:inline="javascript" type="text/javascript">
+    // 基于准备好的dom，初始化echarts实例
+    var myChart = echarts.init(document.getElementById('exp'));
+    // var data = {
+    //     "noteDate": ["10/27", "10/28", "10/29", "10/30", "10/31", "11/1", "11/2", "11/3", "11/4", "11/5", "11/6", "11/7", "11/8", "11/9"],
+    //     "exp": [907.1, 1855.9, 2865.2, 1494.5, 2615.0, 883.8, 231.7, 232.6, 229.1, 1253.5, 235.7, 111.5, 229.4, 241.9]
+    // }
+    var data = [[${expDataString}]]
+
+    let option = {
+        tooltip: {
+            trigger: "axis",
+            axisPointer: {
+                animation: false,
+                type: "cross",
+                lineStyle: {
+                    color: "#376df4",
+                    width: 2,
+                    opacity: 1,
+                },
+            },
+        },
+        xAxis: {
+            type: "category",
+            data: data.noteDate,
+            axisLine: {lineStyle: {color: "#8392A5"}},
+        },
+        yAxis: [
+            {
+                scale: true,
+                axisLine: {lineStyle: {color: "#8392A5"}, show: true},
+                splitLine: {show: false},
+                type: "value",
+                show: true,
+            }
+        ],
+        grid: {
+            x: 80,
+            x2: 50,
+            bottom: 80,
+        },
+        series: [
+            {
+                type: "bar",
+                //                name: "经验",
+                data: data.exp,
+                smooth: data.smooth,
+                showSymbol: true,
+                lineStyle: {
+                    width: 1,
+                },
+                yAxisIndex: 0,
+                label: {
+                    show: false,
+                    position: 'top',
+                    fontWeight: "bold",
+                    fontSize: 16
+                },
+                itemStyle: {
+                    color: "#709ce9"
+                },
+                animation: false
+            }
+        ],
+        // color: ["#c87183", "#8ae7e3", "#0000ff", "#D2691E"],
+    };
+
+    // 使用刚指定的配置项和数据显示图表。
+    myChart.setOption(option);
+
+</script>
+</html>

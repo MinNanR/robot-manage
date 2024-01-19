@@ -77,4 +77,8 @@ public class CharacterData {
         this.globalClassRank = "-";
         this.globalLevelRank = "-";
     }
+
+    public String parseLegionPower() {
+        return "%.2fM".formatted((float) Integer.parseInt(legionPower) / 1000000);
+    }
 }

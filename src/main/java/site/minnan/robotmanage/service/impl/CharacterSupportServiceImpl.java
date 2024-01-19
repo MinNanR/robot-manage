@@ -119,7 +119,6 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         List<String> jobRe = ReUtil.getAllGroups(Pattern.compile("(.*?)\\sin\\s(.*+)"), jobInfo);
         String jobName = jobRe.get(1);
         String serverName = jobRe.get(2);
-        Console.log(lv, percent, jobName, serverName);
 
         CharacterData characterData = new CharacterData();
         characterData.setCharacterImgUrl(img);
