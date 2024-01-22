@@ -130,13 +130,6 @@ class DemoApplicationTests {
     }
 
     @Test
-    public void addRedisData() {
-        redisUtil.valueSet("endpoint_", "oss-cn-shenzhen.aliyuncs.com");
-        redisUtil.valueSet("accessKeySecret_", "wg19lYs9oFHdX5EYUy5wEBdxo3Wina");
-        redisUtil.valueSet("accessKeyId_", "LTAI4G7FmUSUc9kLteR3DuKr");
-    }
-
-    @Test
     public void testQuestionHandle() {
 //        MessageDTO param = initParam("添加问题测试答[CQ:image,file={E91E5B6B-170F-8FE4-E253-7D3B06F56C57}.image,subType=0,url=https://gchat.qpic.cn/gchatpic_new/931437070/931437070-2233222014-E91E5B6B170F8FE4E2537D3B06F56C57/0?vuin=1527761310&term=0&is_origin=2&is_ntv2=1]");
 //        MessageDTO param = initParam("模糊查询问题测");
