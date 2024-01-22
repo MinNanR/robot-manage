@@ -71,13 +71,13 @@ public class MessageHandlerSupportServiceImpl implements MessageHandlerSupportSe
             Integer authMask = strategy.getAuthMask();
 
             if (expressionType == 1 && Objects.equals(expression, rawMessage)) {
-                if ((auth & authMask) != 0) {
+                if ((authMask != 0) && (auth & authMask) == 0) {
                     continue;
                 }
                 log.info("消息[{}]全匹配命中处理策略[{}]", messageId, strategy.getStrategyName());
                 return applicationContext.getBean(componentName, MessageHandler.class);
             } else if (expressionType == 2 && ReUtil.isMatch(expression, rawMessage)) {
-                if ((auth & authMask) != 0) {
+                if ((authMask != 0) && (auth & authMask) == 0) {
                     continue;
                 }
                 log.info("消息[{}]正则命中处理策略[{}]", messageId, strategy.getStrategyName());

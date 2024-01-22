@@ -6,12 +6,13 @@ import cn.hutool.core.date.DateField;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.map.MapBuilder;
 import cn.hutool.core.util.RandomUtil;
-import cn.hutool.core.util.StrUtil;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
+import site.minnan.robotmanage.infrastructure.utils.RedisUtil;
 import site.minnan.robotmanage.strategy.MessageHandler;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -23,6 +24,8 @@ import java.util.stream.Stream;
  */
 @Component("divinate")
 public class DivinateMessageHandler implements MessageHandler {
+
+    private RedisUtil redisUtil;
 
     //随机地点列表
     private static final List<String> placeList;
@@ -57,6 +60,10 @@ public class DivinateMessageHandler implements MessageHandler {
                 .build();
     }
 
+    public DivinateMessageHandler(RedisUtil redisUtil) {
+        this.redisUtil = redisUtil;
+    }
+
 
     /**
      * 处理消息
@@ -68,6 +75,13 @@ public class DivinateMessageHandler implements MessageHandler {
     @Cacheable(value = "divination", keyGenerator = "divinateKeyGenerator")
     public Optional<String> handleMessage(MessageDTO dto) {
         DateTime now = DateTime.now();
+        String userId = dto.getSender().userId();
+        String today = now.toString("yyyyMMdd");
+        String redisKey = "divination::%s:%s".formatted(today, userId);
+        if (redisUtil.hasKey(redisKey)) {
+            String cache = (String) redisUtil.getValue(redisKey);
+            return Optional.of(cache);
+        }
         //获取当前微秒时间戳
         long cutime = System.currentTimeMillis() * 1000;
         long nanoTime = System.nanoTime();
@@ -96,7 +110,9 @@ public class DivinateMessageHandler implements MessageHandler {
         String channelMsg = "今日幸运频道：%s（幸运指数：%s）".formatted(channelRollResult.channel, trigramList[channelRollResult.trigramIndex]);
         sb.append(channelMsg);
 
-        return Optional.of(sb.toString());
+        String result = sb.toString();
+        redisUtil.valueSet(redisKey, result, Duration.ofDays(1));
+        return Optional.of(result);
     }
 
     /**

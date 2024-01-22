@@ -2,6 +2,7 @@ package site.minnan.robotmanage.strategy.impl;
 
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.date.DateTime;
+import cn.hutool.core.lang.Console;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
@@ -159,8 +160,14 @@ public class QuestionMessageHandler implements MessageHandler {
     }
 
     public static void main(String[] args) {
-        String a = "[CQ:image,file={E91E5B6B-170F-8FE4-E253-7D3B06F56C57}.image,subType=0,url=https://gchat.qpic.cn/gchatpic_new/931437070/931437070-2233222014-E91E5B6B170F8FE4E2537D3B06F56C57/0?vuin=1527761310&term=0&is_origin=2&is_ntv2=1]";
+        String content = "11[CQ:image,file=save/1e155d2506c44e04a11c6b0f5cfdc685.jpg]22[CQ:image,file=save/851e6e33cd054556947e330fef22e2f3.jpg]33[CQ:image,file=save/460f1ef645824fd8a0333d1cc05dde22.jpg]44[CQ:image,file=save/013986dae1e14a73b65b6e5e6436f0ef.jpg]55";
+//        String content ="111";
+        Pattern pattern = Pattern.compile("(.*)?+(\\[CQ:.*?])");
+        List<String> allGroups = ReUtil.getAllGroups(pattern, content);
+        for (String group : allGroups) {
+            Console.log(group);
+        }
 
-//        enhanceAnswer(a);
+
     }
 }

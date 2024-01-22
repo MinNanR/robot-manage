@@ -3,8 +3,8 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "raw_message": "#查询CoderMinnan",
-  "group_id": "667082876",
+  "raw_message": "#1+1",
+  "group_id": "931437070",
   "sender": {
     "user_id": "978312456"
   },

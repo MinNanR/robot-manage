@@ -22,6 +22,7 @@ public class HandlerStrategy {
     /**
      * 表达式判定类型，1-相等，2-正则
      */
+    @Column(name = "expression_type")
     private Integer expressionType;
 
     /**

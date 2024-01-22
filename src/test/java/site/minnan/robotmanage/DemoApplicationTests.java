@@ -26,6 +26,7 @@ class DemoApplicationTests {
 
     @Autowired
     @Qualifier("question")
+
     MessageHandler messageHandler;
 
     @Autowired

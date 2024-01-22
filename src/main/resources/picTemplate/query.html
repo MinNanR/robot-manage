@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <meta charset="utf-8" />
-<link href="pure-min.css" rel="stylesheet"/>
+<link href="http://127.0.0.1/resource/pure-min.css" rel="stylesheet"/>
 <head>
     <meta charset="UTF-8">
     <title></title>
@@ -28,6 +28,11 @@
             padding-right: 20px;
         }
 
+        .padding-10 {
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+
         .rank-box {
             background-color: #313131;
             margin-top: 10px;
@@ -38,7 +43,7 @@
         }
 
     </style>
-    <script src="https://minnan.site/resource/echarts.js"></script>
+    <script src="http://127.0.0.1/resource/echarts.js"></script>
 </head>
 <body style="background-color:#3b3b3b;">
 <!--<body>-->
@@ -49,11 +54,11 @@
         </div>
         <div style="margin-top:5px;text-align: center;vertical-align: middle;line-height: 30px;padding-top: 10px;padding-bottom: 10px"
              class="content-box">
-            <img th:src="${c.getCharacterImgUrl()}" style="width: 70%"/>
+            <img th:src="${img}" style="width: 70%"/>
             <div>
-                <span th:text="'Lv.' + ${c.getLevel()} + '(' + ${c.getExpPercent()} + ')'"></span>
-                <span th:text="${c.getJob()}"></span>
-                <span th:text="${c.getServer()}"></span>
+                <div th:text="'Lv.' + ${c.getLevel()} + '(' + ${c.getExpPercent()} + ')'"></div>
+                <div th:text="${c.getJob()}"></div>
+                <div th:text="${c.getServer()}"></div>
             </div>
             <div class="flex-box padding-20">
                 <div>区职业排名</div>
@@ -106,7 +111,7 @@
         </div>
         <div style="margin-top: 5px">
             <!--            <img src="exp.png" style="width: 100%;height: 290px;">-->
-            <div id="exp" style="width: 100%;height: 290px;" class="content-box">
+            <div id="exp" style="width: 100%;height: 320px;" class="content-box">
 
             </div>
         </div>
@@ -114,7 +119,7 @@
             <div class="content-box" style="width: 49%;padding-top: 10px;padding-bottom: 10px;">
                 <div class="flex-box padding-20">
                     <div>7日总经验</div>
-                    <div th:text="${sum7} + 'b'">0b</div>
+                    <div th:text="${sum7}">0b</div>
                 </div>
                 <div class="flex-box padding-20">
                     <div>7日日均经验</div>
@@ -137,8 +142,9 @@
         </div>
         <div style="display: flex;flex-direction: row;margin-top: 5px;">
             <div class="content-box" style="width: 33%;padding-top: 20px;padding-bottom: 20px;text-align: center">
-                <div th:each="expItem: ${exp1}" style="line-height: 1.7" th:text="${expItem.dateLabel() + ':' + expItem.formatExpDifference()}">
-
+                <div class="flex-box padding-20"  th:each="expItem: ${exp1}" style="line-height: 1.7">
+                    <div th:text="${expItem.dateLabel() + ':'}"></div>
+                    <div th:text="${expItem.formatExpDifference()}"></div>
                 </div>
 <!--                <div style="line-height: 1.7">1/3: 3425.7709b</div>-->
 <!--                <div style="line-height: 1.7">1/4: 3425.7709b</div>-->
@@ -148,8 +154,9 @@
             </div>
             <div class="content-box"
                  style="width: 33%;padding-top: 20px;padding-bottom: 20px;text-align: center;margin-left: 5px;">
-                <div th:each="expItem: ${exp2}" style="line-height: 1.7" th:text="${expItem.dateLabel() + ':' + expItem.formatExpDifference()}">
-
+                <div class="flex-box padding-20"  th:each="expItem: ${exp2}" style="line-height: 1.7">
+                    <div th:text="${expItem.dateLabel() + ':'}"></div>
+                    <div th:text="${expItem.formatExpDifference()}"></div>
                 </div>
 <!--                <div style="line-height: 1.7">1/8: 3425.7709b</div>-->
 <!--                <div style="line-height: 1.7">1/9: 3425.7709b</div>-->
@@ -159,8 +166,9 @@
             </div>
             <div class="content-box"
                  style="width: 33%;padding-top: 20px;padding-bottom: 20px;text-align: center;margin-left: 5px;">
-                <div th:each="expItem: ${exp3}" style="line-height: 1.7" th:text="${expItem.dateLabel() + ':' + expItem.formatExpDifference()}">
-
+                <div class="flex-box padding-20" th:each="expItem: ${exp3}" style="line-height: 1.7">
+                    <div th:text="${expItem.dateLabel() + ':'}"></div>
+                    <div th:text="${expItem.formatExpDifference()}"></div>
                 </div>
 <!--                <div style="line-height: 1.7">1/13: 3425.7709b</div>-->
 <!--                <div style="line-height: 1.7">1/14: 3425.7709b</div>-->
@@ -205,7 +213,7 @@
         </div>
         <div class="content-box"
              style="padding-top: 20px;padding-bottom: 10px;text-align: center;margin-top: 5px;">
-            <div style="line-height: 1.5" th:each="p:${levelPredicate}" th:text="${p.lv} + ':' + ${p.dateLabel}" ></div>
+            <div style="line-height: 1.5" th:each="p:${levelPredicate}" th:text="${p.lv()} + ':' + ${p.dateLabel()}" ></div>
 <!--            <div style="line-height: 1.5">282:2024-01-20</div>-->
             <!--            <div style="line-height: 1.5">283:2024-03-07</div>-->
             <!--            <div style="line-height: 1.5">284:2024-04-27</div>-->
