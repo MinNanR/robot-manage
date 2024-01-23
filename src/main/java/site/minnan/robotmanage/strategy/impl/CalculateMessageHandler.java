@@ -103,7 +103,7 @@ public class CalculateMessageHandler implements MessageHandler {
                 } else {
                     while (!operatorStack.isEmpty()
                             && operatorPriority.get(s) <= operatorPriority.get(top.get())
-                            && "(".equals(top.get())) {
+                            && !"(".equals(top.get())) {
                         String operator = operatorStack.pop();
                         suffixExpression.add(new ExpressionItem(operator));
                     }
