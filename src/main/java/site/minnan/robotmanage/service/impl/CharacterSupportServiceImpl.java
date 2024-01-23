@@ -92,6 +92,7 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         //排名信息第一个元素为查询角色排名，第二个元素为排名附近角色排名信息，第二个元素内的第三个元素为区排名
         JSONArray rankInfo = new JSONArray();
         if (ReUtil.contains("fetch\\('(.*?)'\\)", html)) {
+            //排名信息查询链接有有效期，有效期比较短，可能就几秒钟，所以要先查询出排名信息再作后续解析
             String fetchUrl = ReUtil.get("fetch\\('(.*?)'\\)", html, 1);
             HttpResponse rankRes = HttpUtil.createGet(fetchUrl).setProxy(proxy).execute();
             if (rankRes.isOk()) {
@@ -175,18 +176,20 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
             characterData.setExpData(expData);
         }
 
+        Function<JSONArray, CharacterData> createNearItem = e -> {
+            CharacterData nearItem = new CharacterData();
+            nearItem.setName(e.getStr(1));
+            nearItem.setServerClassRank(e.getStr(2));
+            nearItem.setLevel(e.getInt(3).toString());
+            nearItem.setExpPercent(e.getStr(4));
+            return nearItem;
+        };
+
         if (rankInfo.size() > 1) {
             JSONArray nearRankJson = rankInfo.getJSONArray(1).getJSONArray(3);
             List<CharacterData> nearRank = nearRankJson.stream()
                     .map(e -> (JSONArray) e)
-                    .map(e -> {
-                        CharacterData nearItem = new CharacterData();
-                        nearItem.setName(e.getStr(1));
-                        nearItem.setServerClassRank(e.getStr(2));
-                        nearItem.setLevel(e.getInt(3).toString());
-                        nearItem.setExpPercent(e.getStr(4));
-                        return nearItem;
-                    })
+                    .map(createNearItem)
                     .toList();
             characterData.setNearRank(nearRank);
         }

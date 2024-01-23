@@ -25,8 +25,7 @@ class DemoApplicationTests {
     QuestionRepository questionRepository;
 
     @Autowired
-    @Qualifier("question")
-
+    @Qualifier("calculate")
     MessageHandler messageHandler;
 
     @Autowired
@@ -125,7 +124,7 @@ class DemoApplicationTests {
 
     @Test
     public void testCalculate() {
-        MessageDTO dto = initParam("130*5%");
+        MessageDTO dto = initParam("1+(-3*2)");
         Optional<String> s = messageHandler.handleMessage(dto);
         System.out.println(s.orElse("计算错误"));
     }
