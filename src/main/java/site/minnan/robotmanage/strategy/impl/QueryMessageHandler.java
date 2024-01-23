@@ -96,7 +96,7 @@ public class QueryMessageHandler implements MessageHandler {
             return "[CQ:image,file=%s,subType=0]".formatted(url);
         };
 
-        String pngPath = "%s/%s/%s.png".formatted(folder, today, queryTarget);
+        String pngPath = "%s/%s/%s.png".formatted(folder, today, queryTarget.toLowerCase());
         if (FileUtil.exist(pngPath)) {
             return Optional.of(getResult.get());
         }
