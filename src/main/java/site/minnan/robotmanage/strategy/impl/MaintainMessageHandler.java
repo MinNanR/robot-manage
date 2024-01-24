@@ -1,7 +1,9 @@
 package site.minnan.robotmanage.strategy.impl;
 
 import org.springframework.stereotype.Service;
+import site.minnan.robotmanage.entity.aggregate.MaintainRecord;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
+import site.minnan.robotmanage.service.MaintainService;
 import site.minnan.robotmanage.strategy.MessageHandler;
 
 import java.util.Optional;
@@ -14,6 +16,12 @@ import java.util.Optional;
 @Service("maintain")
 public class MaintainMessageHandler implements MessageHandler {
 
+    private MaintainService maintainService;
+
+    public MaintainMessageHandler(MaintainService maintainService) {
+        this.maintainService = maintainService;
+    }
+
 
     /**
      * 处理消息
@@ -23,6 +31,9 @@ public class MaintainMessageHandler implements MessageHandler {
      */
     @Override
     public Optional<String> handleMessage(MessageDTO dto) {
-        return Optional.of("功能完善中");
+        Optional<MaintainRecord> maintain = maintainService.getMaintain();
+        String result = maintain.map(e -> "维护时间：%s到%s".formatted(e.getStartTime(), e.getEndTime()))
+                .orElse("暂无维护公告");
+        return Optional.of(result);
     }
 }

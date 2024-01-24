@@ -25,7 +25,7 @@ class DemoApplicationTests {
     QuestionRepository questionRepository;
 
     @Autowired
-    @Qualifier("calculate")
+    @Qualifier("maintain")
     MessageHandler messageHandler;
 
     @Autowired
@@ -138,6 +138,14 @@ class DemoApplicationTests {
         Optional<String> s = messageHandler.handleMessage(param);
         System.out.println(s.orElse("异常"));
     }
+
+    @Test
+    public void testMaintain() {
+        MessageDTO param = initParam("");
+        Optional<String> s = messageHandler.handleMessage(param);
+        System.out.println(s.orElse("11"));
+    }
+
 
     public static void main(String[] args) {
         System.out.println(ReUtil.isMatch("^查询设置.*", "查询设置民难"));
