@@ -3,10 +3,27 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "raw_message": "#1+1",
+  "raw_message": "#查询LeonS1ny",
   "group_id": "931437070",
   "sender": {
     "user_id": "978312456"
   },
   "message_id": "46393"
 }
+
+###
+POST {{baseUrl}}/api/question/getQuestionList
+Content-Type: application/json
+Accept: application/json
+
+{
+  "pageSize": 10,
+  "pageIndex": 1
+}
+
+###
+POST {{baseUrl}}/api/question/getQuestionInfo
+Content-Type: application/json
+Accept: application/json
+
+{}

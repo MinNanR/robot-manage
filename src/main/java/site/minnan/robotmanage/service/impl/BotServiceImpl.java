@@ -1,10 +1,9 @@
 package site.minnan.robotmanage.service.impl;
 
-import lombok.extern.log4j.Log4j;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
-import site.minnan.robotmanage.entity.vo.BotReply;
+import site.minnan.robotmanage.entity.vo.bot.BotReply;
 import site.minnan.robotmanage.service.BotService;
 import site.minnan.robotmanage.strategy.MessageHandler;
 import site.minnan.robotmanage.strategy.MessageHandlerSupportService;

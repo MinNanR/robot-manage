@@ -1,4 +1,4 @@
-package site.minnan.robotmanage.entity.vo;
+package site.minnan.robotmanage.entity.vo.bot;
 
 /**
  * 经验数据

@@ -1,6 +1,5 @@
 package site.minnan.robotmanage.controller;
 
-import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
@@ -11,7 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
-import site.minnan.robotmanage.entity.vo.BotReply;
+import site.minnan.robotmanage.entity.vo.bot.BotReply;
 import site.minnan.robotmanage.service.BotService;
 
 import java.io.IOException;

@@ -1,7 +1,7 @@
 package site.minnan.robotmanage.service;
 
 import jakarta.persistence.EntityNotFoundException;
-import site.minnan.robotmanage.entity.vo.CharacterData;
+import site.minnan.robotmanage.entity.vo.bot.CharacterData;
 
 /**
  * 角色信息相关服务

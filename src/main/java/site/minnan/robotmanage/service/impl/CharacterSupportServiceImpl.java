@@ -5,7 +5,6 @@ import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.convert.NumberChineseFormatter;
 import cn.hutool.core.date.DateField;
 import cn.hutool.core.date.DateTime;
-import cn.hutool.core.lang.Console;
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.core.util.StrUtil;
@@ -28,8 +27,8 @@ import site.minnan.robotmanage.entity.aggregate.Nick;
 import site.minnan.robotmanage.entity.aggregate.QueryMap;
 import site.minnan.robotmanage.entity.dao.NickRepository;
 import site.minnan.robotmanage.entity.dao.QueryMapRepository;
-import site.minnan.robotmanage.entity.vo.CharacterData;
-import site.minnan.robotmanage.entity.vo.ExpData;
+import site.minnan.robotmanage.entity.vo.bot.CharacterData;
+import site.minnan.robotmanage.entity.vo.bot.ExpData;
 import site.minnan.robotmanage.infrastructure.utils.RedisUtil;
 import site.minnan.robotmanage.service.CharacterSupportService;
 

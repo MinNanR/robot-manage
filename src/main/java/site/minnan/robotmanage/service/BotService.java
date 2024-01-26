@@ -1,7 +1,7 @@
 package site.minnan.robotmanage.service;
 
 import site.minnan.robotmanage.entity.dto.MessageDTO;
-import site.minnan.robotmanage.entity.vo.BotReply;
+import site.minnan.robotmanage.entity.vo.bot.BotReply;
 
 public interface BotService {
 

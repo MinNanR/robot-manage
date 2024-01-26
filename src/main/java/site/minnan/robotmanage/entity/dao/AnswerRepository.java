@@ -18,5 +18,11 @@ public interface AnswerRepository extends JpaRepository<Answer, Integer>, JpaSpe
      */
     List<Answer> findAnswerByQuestionIdIn(Collection<Integer> questions);
 
+    List<Answer> findAnswerByQuestionIdInAndWhetherDeleteIs(Collection<Integer> questions, Integer whetherDelete);
+
     void deleteByQuestionId(Integer questionId);
+
+    List<Answer> findAnswerByQuestionIdAndWhetherDeleteIs(Integer questionId, Integer whetherDelete);
+
+    Integer countByQuestionIdIsAndWhetherDeleteIs(Integer questionId, Integer whetherDelete);
 }

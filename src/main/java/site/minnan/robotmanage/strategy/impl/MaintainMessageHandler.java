@@ -1,12 +1,16 @@
 package site.minnan.robotmanage.strategy.impl;
 
+import cn.hutool.core.util.ReUtil;
+import io.lettuce.core.RedisURI;
 import org.springframework.stereotype.Service;
 import site.minnan.robotmanage.entity.aggregate.MaintainRecord;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
 import site.minnan.robotmanage.service.MaintainService;
 import site.minnan.robotmanage.strategy.MessageHandler;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 /**
  * 维护消息处理

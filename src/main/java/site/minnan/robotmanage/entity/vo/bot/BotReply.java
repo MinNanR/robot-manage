@@ -1,8 +1,7 @@
-package site.minnan.robotmanage.entity.vo;
+package site.minnan.robotmanage.entity.vo.bot;
 
 import cn.hutool.core.util.ReUtil;
 import lombok.Getter;
-import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.HashMap;
 import java.util.Map;
