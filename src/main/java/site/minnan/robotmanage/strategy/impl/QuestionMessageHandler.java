@@ -8,6 +8,7 @@ import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
 import com.aliyun.oss.OSS;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import site.minnan.robotmanage.entity.aggregate.Answer;
@@ -29,7 +30,7 @@ import java.util.stream.Collectors;
  *
  * @author Minnan on 2024/01/18
  */
-@Service("question")
+@Component("question")
 public class QuestionMessageHandler implements MessageHandler {
 
 

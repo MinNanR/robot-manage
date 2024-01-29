@@ -4,6 +4,7 @@ import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
 import site.minnan.robotmanage.infrastructure.utils.RedisUtil;
@@ -18,7 +19,7 @@ import java.util.Optional;
  *
  * @author Minnan on 2024/01/17
  */
-@Service("menu")
+@Component("menu")
 public class MenuMessageHandler implements MessageHandler {
 
 

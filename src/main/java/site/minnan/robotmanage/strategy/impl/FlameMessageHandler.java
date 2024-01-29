@@ -1,5 +1,6 @@
 package site.minnan.robotmanage.strategy.impl;
 
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import site.minnan.robotmanage.entity.aggregate.FlameCost;
 import site.minnan.robotmanage.entity.dao.FlameCostRepository;
@@ -15,7 +16,7 @@ import java.util.stream.Collectors;
  *
  * @author Minnan on 2024/01/12
  */
-@Service("flame")
+@Component("flame")
 public class FlameMessageHandler implements MessageHandler {
 
     private final FlameCostRepository flameCostRepository;

@@ -3,6 +3,7 @@ package site.minnan.robotmanage.strategy.impl;
 import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.StrUtil;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
 import site.minnan.robotmanage.strategy.MessageHandler;
@@ -16,7 +17,7 @@ import java.util.stream.Collectors;
  *
  * @author minnan on 2024/01/12
  */
-@Service("ignore")
+@Component("ignore")
 public class IgnoreMessageHandler implements MessageHandler {
 
     /**

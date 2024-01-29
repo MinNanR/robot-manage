@@ -2,6 +2,7 @@ package site.minnan.robotmanage.strategy.impl;
 
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.ReUtil;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
 import site.minnan.robotmanage.strategy.MessageHandler;
@@ -19,7 +20,7 @@ import java.util.regex.Pattern;
  *
  * @author Minnan on 2024/01/17
  */
-@Service("calculate")
+@Component("calculate")
 public class CalculateMessageHandler implements MessageHandler {
 
 

@@ -1,6 +1,7 @@
 package site.minnan.robotmanage.strategy.impl;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import site.minnan.robotmanage.entity.dao.LvExpRepository;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
@@ -14,7 +15,7 @@ import java.util.Optional;
  *
  * @author Minnan on 2024/01/18
  */
-@Service("expQuery")
+@Component("expQuery")
 @Slf4j
 public class ExpQueryMessageHandler implements MessageHandler {
 

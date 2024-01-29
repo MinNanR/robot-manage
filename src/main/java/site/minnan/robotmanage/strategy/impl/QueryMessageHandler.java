@@ -15,6 +15,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
@@ -41,7 +42,7 @@ import java.util.function.Supplier;
  *
  * @author Minnan on 2024/01/15
  */
-@Service("query")
+@Component("query")
 @Slf4j
 public class QueryMessageHandler implements MessageHandler {
 

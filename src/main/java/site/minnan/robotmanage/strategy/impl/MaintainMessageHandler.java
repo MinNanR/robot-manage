@@ -2,6 +2,7 @@ package site.minnan.robotmanage.strategy.impl;
 
 import cn.hutool.core.util.ReUtil;
 import io.lettuce.core.RedisURI;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import site.minnan.robotmanage.entity.aggregate.MaintainRecord;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
@@ -17,7 +18,7 @@ import java.util.regex.Pattern;
  *
  * @author Minnan on 2024/01/18
  */
-@Service("maintain")
+@Component("maintain")
 public class MaintainMessageHandler implements MessageHandler {
 
     private MaintainService maintainService;
