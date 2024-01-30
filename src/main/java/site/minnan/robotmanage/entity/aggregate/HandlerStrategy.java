@@ -3,6 +3,7 @@ package site.minnan.robotmanage.entity.aggregate;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import site.minnan.robotmanage.entity.dto.UpdateStrategyDTO;
 
 @Data
 @Entity
@@ -52,4 +53,12 @@ public class HandlerStrategy {
      */
     @Column(name = "strategy_name")
     private String strategyName;
+
+    public void modify(UpdateStrategyDTO dto) {
+        this.strategyName = dto.getStrategyName();
+        this.expressionType = dto.getExpressionType();
+        this.expression = dto.getExpression();
+        this.componentName = dto.getComponentName();
+        this.authMask = dto.getAuthMask();
+    }
 }

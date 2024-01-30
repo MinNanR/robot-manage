@@ -3,7 +3,6 @@ package site.minnan.robotmanage.entity.dao;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
-import site.minnan.robotmanage.entity.aggregate.Answer;
 import site.minnan.robotmanage.entity.aggregate.HandlerStrategy;
 
 import java.util.List;
@@ -18,4 +17,29 @@ public interface StrategyRepository extends JpaRepository<HandlerStrategy, Integ
      * @return
      */
     List<HandlerStrategy> getAllByEnabledIsOrderByOrdinal(Integer enabled);
+
+    /**
+     *
+     * @param existComponentList
+     * @return
+     */
+    List<HandlerStrategy> getAllByComponentNameNotIn(List<String> existComponentList);
+
+    /**
+     * 查找后继处理策略
+     *
+     * @param ordinal
+     * @return
+     */
+    HandlerStrategy findFirstByOrdinalGreaterThanOrderByOrdinal(Integer ordinal);
+
+    /**
+     * 查找前驱处理策略
+     *
+     * @param ordinal
+     * @return
+     */
+    HandlerStrategy findFirstByOrdinalLessThanOrderByOrdinalDesc(Integer ordinal);
+
+
 }

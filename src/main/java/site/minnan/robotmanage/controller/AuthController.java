@@ -15,7 +15,7 @@ import site.minnan.robotmanage.entity.dto.LoginDTO;
  */
 @Slf4j
 @Controller
-@RequestMapping("/api/auth")
+@RequestMapping("/robot/api/auth")
 public class AuthController {
 
 

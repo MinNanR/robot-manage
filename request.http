@@ -1,9 +1,9 @@
-POST {{baseUrl}}/badeling_bot/onMessage
+POST {{botUrl}}/onMessage
 Content-Type: application/json
 Accept: application/json
 
 {
-  "raw_message": "#查询LeonS1ny",
+  "raw_message": "#=bin(123)",
   "group_id": "931437070",
   "sender": {
     "user_id": "978312456"
@@ -12,7 +12,7 @@ Accept: application/json
 }
 
 ###
-POST {{baseUrl}}/api/question/getQuestionList
+POST {{apiUrl}}/api/question/getQuestionList
 Content-Type: application/json
 Accept: application/json
 
@@ -22,8 +22,25 @@ Accept: application/json
 }
 
 ###
-POST {{baseUrl}}/api/question/getQuestionInfo
+POST {{apiUrl}}/api/question/getQuestionInfo
 Content-Type: application/json
 Accept: application/json
 
 {}
+
+###
+POST {{apiUrl}}/api/strategy/getComponentDropDown
+Content-Type: application/json
+Accept: application/json
+
+{}
+
+###
+POST {{apiUrl}}/api/strategy/getStrategyList
+Content-Type: application/json
+Accept: application/json
+
+{
+  "pageIndex": 1,
+  "pageSize": 10
+}

@@ -15,7 +15,7 @@ import java.util.Optional;
  *
  * @author Minnan on 2024/01/18
  */
-@Component("expQuery")
+//@Component("expQuery")
 @Slf4j
 public class ExpQueryMessageHandler implements MessageHandler {
 

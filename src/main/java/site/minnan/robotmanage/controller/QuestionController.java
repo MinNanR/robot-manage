@@ -23,7 +23,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/question")
+@RequestMapping("/robot/api/question")
 public class QuestionController {
 
     @Autowired

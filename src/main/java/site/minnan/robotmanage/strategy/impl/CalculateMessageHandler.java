@@ -59,6 +59,7 @@ public class CalculateMessageHandler implements MessageHandler {
     @Override
     public Optional<String> handleMessage(MessageDTO dto) {
         String formula = dto.getRawMessage();
+        formula = formula.replace("=", "");
         formula = formula.toLowerCase().replace(" ", "").replaceAll("（", "(").replaceAll("）", ")");
         Function<Double, Optional<String>> specialFormula = d -> Optional.of(NumberUtil.decimalFormat("#.####", d));
 
