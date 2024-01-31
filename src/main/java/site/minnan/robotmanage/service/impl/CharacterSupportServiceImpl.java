@@ -15,6 +15,7 @@ import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.criteria.Predicate;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -22,11 +23,18 @@ import org.jsoup.select.Elements;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import site.minnan.robotmanage.entity.aggregate.Nick;
 import site.minnan.robotmanage.entity.aggregate.QueryMap;
 import site.minnan.robotmanage.entity.dao.NickRepository;
 import site.minnan.robotmanage.entity.dao.QueryMapRepository;
+import site.minnan.robotmanage.entity.dto.GetNickListDTO;
+import site.minnan.robotmanage.entity.dto.GetQueryMapListDTO;
+import site.minnan.robotmanage.entity.vo.ListQueryVO;
 import site.minnan.robotmanage.entity.vo.bot.CharacterData;
 import site.minnan.robotmanage.entity.vo.bot.ExpData;
 import site.minnan.robotmanage.infrastructure.utils.RedisUtil;
@@ -34,10 +42,7 @@ import site.minnan.robotmanage.service.CharacterSupportService;
 
 import java.net.Proxy;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Stack;
+import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -341,5 +346,52 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         count++;
         redisUtil.valueSet(key, count, Duration.ofDays(1L));
         return count;
+    }
+
+    /**
+     * 查询昵称列表
+     *
+     * @param dto
+     * @return
+     */
+    @Override
+    public ListQueryVO<Nick> getNickList(GetNickListDTO dto) {
+        Specification<Nick> specification = ((root, query, builder) -> {
+            List<Predicate> list = new ArrayList<>();
+            if (StrUtil.isNotBlank(dto.getUserId())) {
+                list.add(builder.equal(root.get("qq"), dto.getUserId()));
+            }
+            if (StrUtil.isNotBlank(dto.getKeyword())) {
+                Predicate nickPredicate = builder.like(root.get("nick"), "%%%s%%".formatted(dto.getKeyword()));
+                Predicate characterPredicate = builder.like(root.get("character"), "%%%s%%".formatted(dto.getKeyword()));
+                Predicate keywordPredicate = builder.or(nickPredicate, characterPredicate);
+                list.add(keywordPredicate);
+            }
+            return query.where(list.toArray(new Predicate[list.size()])).getRestriction();
+        });
+        PageRequest page = PageRequest.of(dto.getPageIndex() - 1, dto.getPageSize());
+        Page<Nick> nickList = nickRepository.findAll(specification, page);
+        return new ListQueryVO<>(nickList.toList(), nickList.getTotalElements(), nickList.getTotalPages());
+    }
+
+    /**
+     * 查询快捷查询链接参数
+     *
+     * @param dto
+     * @return
+     */
+    @Override
+    public ListQueryVO<QueryMap> getQueryMapList(GetQueryMapListDTO dto) {
+        Specification<QueryMap> specification = ((root, query, builder) -> {
+            if (StrUtil.isNotBlank(dto.getKeyword())) {
+                Predicate predicate = builder.like(root.get("queryContent"), dto.getKeyword());
+                return query.where(predicate).getRestriction();
+            } else {
+                return query.where().getRestriction();
+            }
+        });
+        PageRequest page = PageRequest.of(dto.getPageIndex() - 1, dto.getPageSize());
+        Page<QueryMap> queryResult = queryMapRepository.findAll(specification, page);
+        return new ListQueryVO<>(queryResult.toList(), queryResult.getTotalElements(), queryResult.getTotalPages());
     }
 }

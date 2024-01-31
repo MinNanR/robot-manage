@@ -44,3 +44,13 @@ Accept: application/json
   "pageIndex": 1,
   "pageSize": 10
 }
+
+###
+POST {{apiUrl}}/api/character/getNickList
+Content-Type: application/json
+Accept: application/json
+
+{
+  "pageIndex": 1,
+  "pageSize": 10
+}
