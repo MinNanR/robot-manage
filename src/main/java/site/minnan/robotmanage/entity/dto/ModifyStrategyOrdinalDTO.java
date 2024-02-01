@@ -10,7 +10,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class ModifyStrategyOrdinalDTO {
+public class ModifyStrategyOrdinalDTO extends OperateDTO{
 
     //修改的策略id
     private Integer id;

@@ -3,7 +3,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "raw_message": "#=bin(123)",
+  "raw_message": "#hgg",
   "group_id": "931437070",
   "sender": {
     "user_id": "978312456"
@@ -49,8 +49,34 @@ Accept: application/json
 POST {{apiUrl}}/api/character/getNickList
 Content-Type: application/json
 Accept: application/json
+Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJtaW5uYW4iLCJuaWNrTmFtZSI6IuawkemaviIsInN0YW1wIjoiNkJFQUVGNDc4MDA5NEQ4OUFENkY5NTY3NjZCRTVDOTMiLCJpZCI6MSwiZXhwIjoxNzA3MzU1NTE5LCJpYXQiOjE3MDY3NTA3MTl9.g8cWbfmIZOYokbUc7pgHtZhFTuTm5zdkKO3TahehhYCjXs4tT1xaoS8nZlH0zMvnSsBKoUKwpBwtA1THnK1RRg
 
 {
-  "pageIndex": 1,
-  "pageSize": 10
+
 }
+
+###
+POST {{apiUrl}}/api/character/updQueryMap
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJtaW5uYW4iLCJuaWNrTmFtZSI6IuawkemaviIsInN0YW1wIjoiNkJFQUVGNDc4MDA5NEQ4OUFENkY5NTY3NjZCRTVDOTMiLCJpZCI6MSwiZXhwIjoxNzA3MzU1NTE5LCJpYXQiOjE3MDY3NTA3MTl9.g8cWbfmIZOYokbUc7pgHtZhFTuTm5zdkKO3TahehhYCjXs4tT1xaoS8nZlH0zMvnSsBKoUKwpBwtA1THnK1RRg
+
+{
+
+}
+
+###
+POST {{apiUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "username": "minnan",
+  "password": "85fb9f3c8ecd946d9d366c60258fd34d"
+}
+
+###
+POST {{apiUrl}}/api/auth/getMenuList
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJtaW5uYW4iLCJuaWNrTmFtZSI6IuawkemaviIsInN0YW1wIjoiNkJFQUVGNDc4MDA5NEQ4OUFENkY5NTY3NjZCRTVDOTMiLCJpZCI6MSwiZXhwIjoxNzA3MzU1NTE5LCJpYXQiOjE3MDY3NTA3MTl9.g8cWbfmIZOYokbUc7pgHtZhFTuTm5zdkKO3TahehhYCjXs4tT1xaoS8nZlH0zMvnSsBKoUKwpBwtA1THnK1RRg

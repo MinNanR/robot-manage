@@ -13,7 +13,7 @@ import java.util.List;
  */
 @Getter
 @Setter
-public class ModifyQuestionDTO {
+public class ModifyQuestionDTO extends OperateDTO {
 
     //词条id
     private Integer id;

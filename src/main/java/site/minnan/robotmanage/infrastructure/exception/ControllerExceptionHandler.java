@@ -14,6 +14,7 @@ import site.minnan.robotmanage.entity.response.ResponseCode;
 import site.minnan.robotmanage.entity.response.ResponseEntity;
 
 
+import javax.security.sasl.AuthenticationException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -27,22 +28,22 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ControllerExceptionHandler {
 
-//    /**
-//     * 登录时的非法用户异常
-//     *
-//     * @param ex 异常
-//     * @return
-//     */
-//    @ExceptionHandler(AuthenticationException.class)
-//    @ResponseBody
-//    public ResponseEntity<?> handleAuthenticationException(AuthenticationException ex) {
-//        log.error(StrUtil.format("fail to login {}", ex.getMessage()), ex);
-//        if (ex.getMessage() != null) {
-//            return ResponseEntity.fail(ResponseCode.INVALID_USER,
-//                    MapBuilder.create().put("details", ex.getMessage()).build());
-//        }
-//        return ResponseEntity.fail(ResponseCode.INVALID_USER);
-//    }
+    /**
+     * 登录时的非法用户异常
+     *
+     * @param ex 异常
+     * @return
+     */
+    @ExceptionHandler(AuthenticationException.class)
+    @ResponseBody
+    public ResponseEntity<?> handleAuthenticationException(AuthenticationException  ex) {
+        log.error(StrUtil.format("fail to login {}", ex.getMessage()), ex);
+        if (ex.getMessage() != null) {
+            return ResponseEntity.fail(ResponseCode.INVALID_USER,
+                    MapBuilder.create().put("details", ex.getMessage()).build());
+        }
+        return ResponseEntity.fail(ResponseCode.INVALID_USER);
+    }
 
     /**
      * 参数非法或缺失时的异常

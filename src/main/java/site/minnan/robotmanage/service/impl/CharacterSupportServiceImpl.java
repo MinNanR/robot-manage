@@ -34,9 +34,12 @@ import site.minnan.robotmanage.entity.dao.NickRepository;
 import site.minnan.robotmanage.entity.dao.QueryMapRepository;
 import site.minnan.robotmanage.entity.dto.GetNickListDTO;
 import site.minnan.robotmanage.entity.dto.GetQueryMapListDTO;
+import site.minnan.robotmanage.entity.dto.UpdateQueryMapDTO;
 import site.minnan.robotmanage.entity.vo.ListQueryVO;
 import site.minnan.robotmanage.entity.vo.bot.CharacterData;
 import site.minnan.robotmanage.entity.vo.bot.ExpData;
+import site.minnan.robotmanage.infrastructure.exception.EntityAlreadyExistException;
+import site.minnan.robotmanage.infrastructure.exception.EntityNotExistException;
 import site.minnan.robotmanage.infrastructure.utils.RedisUtil;
 import site.minnan.robotmanage.service.CharacterSupportService;
 
@@ -393,5 +396,38 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         PageRequest page = PageRequest.of(dto.getPageIndex() - 1, dto.getPageSize());
         Page<QueryMap> queryResult = queryMapRepository.findAll(specification, page);
         return new ListQueryVO<>(queryResult.toList(), queryResult.getTotalElements(), queryResult.getTotalPages());
+    }
+
+    /**
+     * 修改快捷查询
+     *
+     * @param dto
+     */
+    @Override
+    public void updateQueryMap(UpdateQueryMapDTO dto) {
+        Integer id = dto.getId();
+        Optional<QueryMap> queryMapOpt = queryMapRepository.findById(id);
+        QueryMap queryMap = queryMapOpt.orElseThrow(() -> new EntityNotExistException("快捷查询记录不存在"));
+        queryMap.setQueryUrl(dto.getQueryUrl());
+        queryMap.setQueryContent(dto.getQueryContent());
+        queryMapRepository.save(queryMap);
+    }
+
+    /**
+     * 添加快捷查询
+     *
+     * @param dto
+     */
+    @Override
+    public void addQueryMap(UpdateQueryMapDTO dto) {
+        String queryContent = dto.getQueryContent();
+        QueryMap queryMap = queryMapRepository.findByQueryContent(queryContent);
+        if (queryMap != null) {
+            throw new EntityAlreadyExistException("快捷查询已存在");
+        }
+        queryMap = new QueryMap();
+        queryMap.setQueryContent(dto.getQueryContent());
+        queryMap.setQueryUrl(dto.getQueryUrl());
+        queryMapRepository.save(queryMap);
     }
 }

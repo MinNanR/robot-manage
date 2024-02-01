@@ -8,7 +8,7 @@ import lombok.Data;
  * @author Minnan on 2024/01/25
  */
 @Data
-public class DetailsQueryDTO {
+public class DetailsQueryDTO extends OperateDTO{
 
     private Integer id;
 }

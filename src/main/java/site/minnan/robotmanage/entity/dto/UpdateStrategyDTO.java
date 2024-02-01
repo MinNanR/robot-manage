@@ -10,7 +10,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class UpdateStrategyDTO {
+public class UpdateStrategyDTO extends OperateDTO {
 
     //id
     private Integer id;

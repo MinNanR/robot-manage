@@ -8,10 +8,12 @@ import site.minnan.robotmanage.entity.aggregate.Nick;
 import site.minnan.robotmanage.entity.aggregate.QueryMap;
 import site.minnan.robotmanage.entity.dto.GetNickListDTO;
 import site.minnan.robotmanage.entity.dto.GetQueryMapListDTO;
+import site.minnan.robotmanage.entity.dto.UpdateQueryMapDTO;
 import site.minnan.robotmanage.entity.response.ResponseEntity;
 import site.minnan.robotmanage.entity.vo.ListQueryVO;
 import site.minnan.robotmanage.infrastructure.annotation.ParamValidate;
 import site.minnan.robotmanage.infrastructure.annotation.Validate;
+import site.minnan.robotmanage.infrastructure.validate.NotBlankValidator;
 import site.minnan.robotmanage.infrastructure.validate.NotNullValidator;
 import site.minnan.robotmanage.service.CharacterSupportService;
 
@@ -38,10 +40,39 @@ public class CharacterController {
         return ResponseEntity.success(nickList);
     }
 
-    @ParamValidate(validates = @Validate(validator = NotNullValidator.class, fields =  {"pageSize","pageIndex"}))
+    @ParamValidate(validates = @Validate(validator = NotNullValidator.class, fields = {"pageSize", "pageIndex"}))
     @PostMapping("getQueryMapList")
     public ResponseEntity<ListQueryVO<QueryMap>> getQueryMapList(@RequestBody GetQueryMapListDTO dto) {
         ListQueryVO<QueryMap> queryMapList = characterSupportService.getQueryMapList(dto);
         return ResponseEntity.success(queryMapList);
+    }
+
+    /**
+     * 更新快捷查询
+     *
+     * @param dto
+     * @return
+     */
+    @ParamValidate(validates = {
+            @Validate(validator = NotNullValidator.class, fields = "id"),
+            @Validate(validator = NotBlankValidator.class, fields = {"queryContent", "queryUrl"})
+    })
+    @PostMapping("updQueryMap")
+    public ResponseEntity<?> updateQueryMap(@RequestBody UpdateQueryMapDTO dto) {
+        characterSupportService.updateQueryMap(dto);
+        return ResponseEntity.success();
+    }
+
+    /**
+     * 添加快捷查询
+     *
+     * @param dto
+     * @return
+     */
+    @ParamValidate(validates = @Validate(validator = NotBlankValidator.class, fields = {"queryContent", "queryUrl"}))
+    @PostMapping("addQueryMap")
+    public ResponseEntity<?> addQueryMap(@RequestBody UpdateQueryMapDTO dto) {
+        characterSupportService.addQueryMap(dto);
+        return ResponseEntity.success();
     }
 }

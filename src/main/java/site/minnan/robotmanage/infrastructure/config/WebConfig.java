@@ -1,5 +1,6 @@
 package site.minnan.robotmanage.infrastructure.config;
 
+import cn.hutool.core.date.DateTime;
 import jakarta.servlet.MultipartConfigElement;
 import org.springframework.boot.web.servlet.MultipartConfigFactory;
 import org.springframework.context.annotation.Bean;
@@ -11,6 +12,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.util.UUID;
 
 
 @Configuration
@@ -48,6 +50,5 @@ public class WebConfig implements WebMvcConfigurer {
         factory.setMaxRequestSize(DataSize.of(100, DataUnit.MEGABYTES));
         return factory.createMultipartConfig();
     }
-
 
 }

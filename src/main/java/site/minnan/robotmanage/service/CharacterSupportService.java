@@ -5,6 +5,7 @@ import site.minnan.robotmanage.entity.aggregate.Nick;
 import site.minnan.robotmanage.entity.aggregate.QueryMap;
 import site.minnan.robotmanage.entity.dto.GetNickListDTO;
 import site.minnan.robotmanage.entity.dto.GetQueryMapListDTO;
+import site.minnan.robotmanage.entity.dto.UpdateQueryMapDTO;
 import site.minnan.robotmanage.entity.vo.ListQueryVO;
 import site.minnan.robotmanage.entity.vo.bot.CharacterData;
 
@@ -63,4 +64,18 @@ public interface CharacterSupportService {
      * @return
      */
     ListQueryVO<QueryMap> getQueryMapList(GetQueryMapListDTO dto);
+
+    /**
+     * 修改快捷查询
+     *
+     * @param dto
+     */
+    void updateQueryMap(UpdateQueryMapDTO dto);
+
+    /**
+     * 添加快捷查询
+     *
+     * @param dto
+     */
+    void addQueryMap(UpdateQueryMapDTO dto);
 }

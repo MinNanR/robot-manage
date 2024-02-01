@@ -17,5 +17,7 @@ public interface QuestionGroupRepository extends JpaRepository<QuestionGroup, In
 
     List<QuestionGroup> findByQuestionIdIs(Integer questionId);
 
+    List<QuestionGroup> findByQuestionIdIn(List<Integer> questionIdList);
+
     void deleteByQuestionIdIs(Integer questionId);
 }

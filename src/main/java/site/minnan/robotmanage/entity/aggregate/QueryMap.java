@@ -1,8 +1,6 @@
 package site.minnan.robotmanage.entity.aggregate;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Data;
 
 /**
@@ -16,6 +14,7 @@ import lombok.Data;
 public class QueryMap {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     //查询地址

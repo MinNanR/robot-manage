@@ -7,8 +7,8 @@ spring:
     resources:
       static-locations: classpath:/vendor
   datasource:
-    url: jdbc:sqlite:F:/Minnan/robot-manage/robot.db
-#    url: jdbc:sqlite:/home/minnan/robot-manage/robot.db
+#    url: jdbc:sqlite:F:/Minnan/robot-manage/robot.db
+    url: jdbc:sqlite:/home/minnan/robot-manage/robotData/robot.db
     driver-class-name: org.sqlite.JDBC
   jpa:
     hibernate:
@@ -40,9 +40,9 @@ server:
 jwt:
   route:
     authentication:
-      path: /rental/auth/login/password, /album/*
+      path: /badeling_bot/onMessage, /robot/auth/login
   header: Authorization
-  expiration: 604800
+  expiration: 7200
   scret: min107
 
 logging:

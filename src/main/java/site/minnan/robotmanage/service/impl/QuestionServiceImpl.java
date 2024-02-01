@@ -157,7 +157,7 @@ public class QuestionServiceImpl implements QuestionService {
         String now = DateTime.now().toString("yyyy-MM-dd HH:mm:ss");
         question.setUpdateTime(now);
         // TODO: 2024/01/26 设置更新人，后续增加权限后补充
-        question.setUpdater("平台");
+        question.setUpdater("平台:" + dto.getOperatorName());
         questionRepository.save(question);
     }
 
@@ -176,12 +176,13 @@ public class QuestionServiceImpl implements QuestionService {
         answer.setWhetherDelete(1);
         answer.setUpdateTime(now);
         // TODO: 2024/01/26 设置更新人，后续增加权限后补充
-        answer.setUpdater("平台");
+        String operatorName = dto.getOperatorName();
+        answer.setUpdater("平台:" + operatorName);
         Integer questionId = answer.getQuestionId();
         Optional<Question> questionOpt = questionRepository.findById(questionId);
         Question question = questionOpt.orElseThrow(() -> new EntityNotExistException("词条不存在"));
         question.setUpdateTime(now);
-        question.setUpdater("平台");
+        question.setUpdater("平台:" + operatorName);
 
         answerRepository.save(answer);
 
@@ -210,7 +211,7 @@ public class QuestionServiceImpl implements QuestionService {
         question.setWhetherDelete(1);
         question.setUpdateTime(now);
         // TODO: 2024/01/26 设置更新人，后续增加权限后补充
-        question.setUpdater("平台");
+        question.setUpdater("平台:" + dto.getOperatorName());
         questionRepository.save(question);
         questionRepository.save(question);
     }
