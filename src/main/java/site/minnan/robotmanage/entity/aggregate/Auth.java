@@ -35,8 +35,8 @@ public class Auth {
     //第五位：删除答案权限
     //第六位：BOSS复制权限
     //第七位：使用权限，此位用异或判断
-    //第八位：共享词条权限
-    //第九位：跑旗录入操作权限
+    //第八位：触发维护检测
+    //第九位：权限操作
     @Column(name = "auth_number")
     private Integer authNumber;
 

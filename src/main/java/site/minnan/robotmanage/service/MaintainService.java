@@ -14,7 +14,7 @@ public interface MaintainService {
     /**
      * 探测维护公告
      */
-    void detectMaintain();
+    Optional<MaintainRecord> detectMaintain();
 
     /**
      * 查询最近一次维护时间

@@ -45,9 +45,11 @@ public class MaintainServiceImpl implements MaintainService {
 
     /**
      * 探测维护公告
+     *
+     * @return
      */
     @Override
-    public void detectMaintain() {
+    public Optional<MaintainRecord> detectMaintain() {
         //查询维护公告网页
         HttpResponse listRes = HttpUtil.createGet(LIST_URL).setProxy(proxy).execute();
         String listText = listRes.body();
@@ -56,6 +58,7 @@ public class MaintainServiceImpl implements MaintainService {
         Element container = listDoc.selectFirst(".news-container");
         Elements newsItemList = container.select(".news-item");
 
+        Optional<MaintainRecord> opt = Optional.empty();
         for (Element newsItem : newsItemList) {
             //维护公共的详情链接
             String href = newsItem.select("a").attr("href");
@@ -122,8 +125,10 @@ public class MaintainServiceImpl implements MaintainService {
             log.info("检测到新维护公告，公告id {}，维护时间为{}-{}", record.getNewsId(), record.getStartTime(), record.getEndTime());
             //存入数据库
             maintainRecordRepository.save(record);
+            opt = Optional.of(record);
             break;
         }
+        return opt;
     }
 
     /**
