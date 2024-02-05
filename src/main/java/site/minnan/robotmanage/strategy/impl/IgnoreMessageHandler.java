@@ -73,7 +73,7 @@ public class IgnoreMessageHandler implements MessageHandler {
                 """
                 .formatted(NumberUtil.decimalFormat("#.##%", baseIgn), bossDef, bossDmgFormat(originalBossDmg),
                 bossDmgFormat(newBossDmg), fdAdd);
-        return Optional.of(result);
+        return Optional.of("\n" + result);
     }
 
     /**

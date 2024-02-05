@@ -177,9 +177,5 @@ public class AuthMessageHandler implements MessageHandler {
 
     }
 
-    public static void main(String[] args) {
-        Function<Boolean, String> f = b -> b ? "有" : "无";
-        int authNumber = 385;
-        System.out.println(f.apply((authNumber & 1) != 0));
-    }
+
 }

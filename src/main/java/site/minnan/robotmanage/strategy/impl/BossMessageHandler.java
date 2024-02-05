@@ -38,7 +38,7 @@ public class BossMessageHandler implements MessageHandler {
         Boss boss = bossRepository.findBossByBossNickNameIs(bossName);
         if (boss != null) {
             String msg = boss.toMsg();
-            return Optional.of(msg);
+            return Optional.of("\n" + msg);
         } else {
             List<Boss> bossList = bossRepository.findBossesByBossNickNameLike(bossName);
             if (bossList.isEmpty()) {

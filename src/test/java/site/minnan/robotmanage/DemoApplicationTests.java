@@ -1,9 +1,16 @@
 package site.minnan.robotmanage;
 
+import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.lang.Console;
 import cn.hutool.core.util.ReUtil;
+import cn.hutool.http.HttpResponse;
+import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -11,12 +18,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 import site.minnan.robotmanage.entity.aggregate.Question;
 import site.minnan.robotmanage.entity.dao.QuestionRepository;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
+import site.minnan.robotmanage.infrastructure.config.ProxyConfig;
 import site.minnan.robotmanage.infrastructure.utils.RedisUtil;
 import site.minnan.robotmanage.service.CharacterSupportService;
 import site.minnan.robotmanage.strategy.MessageHandler;
 
-import java.util.List;
-import java.util.Optional;
+import java.net.Proxy;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @SpringBootTest(classes = BotApplication.class)
 class DemoApplicationTests {
@@ -144,11 +153,6 @@ class DemoApplicationTests {
         MessageDTO param = initParam("");
         Optional<String> s = messageHandler.handleMessage(param);
         System.out.println(s.orElse("11"));
-    }
-
-
-    public static void main(String[] args) {
-        System.out.println(ReUtil.isMatch("^查询设置.*", "查询设置民难"));
     }
 
 }

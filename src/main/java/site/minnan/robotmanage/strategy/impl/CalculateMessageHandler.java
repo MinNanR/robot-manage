@@ -87,7 +87,7 @@ public class CalculateMessageHandler implements MessageHandler {
         } else if (formula.toLowerCase().startsWith("oct\\((.*?)\\)")) {
             Pattern octPattern = Pattern.compile("oct\\((.*?)\\)");
             String octParam = ReUtil.getGroup1(octPattern, formula);
-            String result = Integer.toHexString(Integer.parseInt(octParam));
+            String result = Integer.toOctalString(Integer.parseInt(octParam));
             return Optional.of(result);
         } else if (formula.toLowerCase().startsWith("0b")) {
             return Optional.of(Integer.valueOf(formula.substring(2), 2).toString());

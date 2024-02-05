@@ -112,7 +112,7 @@ public class ReckonSacMessageHandler implements MessageHandler {
             messageLine.add("%s：%d".formatted(dateString, currentSac * 10));
         }
 
-        String reply = String.join("\n", messageLine);
+        String reply = "\n" + String.join("\n", messageLine);
         return Optional.of(reply);
     }
 

@@ -87,7 +87,7 @@ public class StirUpMessageHandler implements MessageHandler {
                         chTrigram.getExplanation());
 
 
-        return Optional.of(message);
+        return Optional.of("\n" + message);
     }
 
     /**
