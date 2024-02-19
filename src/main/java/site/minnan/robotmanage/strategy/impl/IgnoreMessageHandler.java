@@ -53,12 +53,12 @@ public class IgnoreMessageHandler implements MessageHandler {
 
         Iterator<Float> paramItr = defList.iterator();
         float baseIgn = paramItr.next() / 100;
-        float originalBossDmg = bossDmg(bossDef / 100, baseIgn);
+        float originalBossDmg = bossDmg((float) bossDef / 100, baseIgn);
         while (paramItr.hasNext()) {
             float addIgn = paramItr.next() / 100;
             baseIgn = newDef(baseIgn, addIgn);
         }
-        float newBossDmg = bossDmg(bossDef / 100, baseIgn);
+        float newBossDmg = bossDmg((float) bossDef / 100, baseIgn);
 
         String fdAdd = "-";
         if (originalBossDmg > 0 && newBossDmg > 0) {
@@ -72,7 +72,7 @@ public class IgnoreMessageHandler implements MessageHandler {
                 提升FD：%s
                 """
                 .formatted(NumberUtil.decimalFormat("#.##%", baseIgn), bossDef, bossDmgFormat(originalBossDmg),
-                bossDmgFormat(newBossDmg), fdAdd);
+                        bossDmgFormat(newBossDmg), fdAdd);
         return Optional.of("\n" + result);
     }
 
@@ -83,7 +83,7 @@ public class IgnoreMessageHandler implements MessageHandler {
      * @param ign
      * @return
      */
-    private float bossDmg(int bossDef, float ign) {
+    private float bossDmg(float bossDef, float ign) {
         return 1 - bossDef * (1 - ign);
     }
 
@@ -105,6 +105,7 @@ public class IgnoreMessageHandler implements MessageHandler {
 
     /**
      * 格式化BOSS伤害
+     *
      * @param dmg
      * @return
      */

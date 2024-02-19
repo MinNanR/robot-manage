@@ -43,12 +43,8 @@ public class DefaultMessageHandler implements MessageHandler {
         String groupId = dto.getGroupId();
         Specification<Question> specification = (root, query, builder) -> {
             Predicate contentPredicate = builder.equal(root.get("content"), message);
-
-            Predicate groupIdPredicate = builder.equal(root.get("groupId"), groupId);
-//            Predicate sharePredicate = builder.equal(root.get("share"), 1);
-//            Predicate shownPredicate = builder.or(groupIdPredicate, sharePredicate);
-
-            return query.where(contentPredicate).getRestriction();
+            Predicate whetherDeletePredicate = builder.equal(root.get("whetherDelete"), 0);
+            return query.where(contentPredicate, whetherDeletePredicate).getRestriction();
         };
         //查询词条列表
         List<Question> questionList = questionRepository.findAll(specification);
@@ -70,7 +66,7 @@ public class DefaultMessageHandler implements MessageHandler {
 
         List<Integer> questionIds = questionList.stream().map(e -> e.getId()).collect(Collectors.toList());
 
-        List<Answer> answers = answerRepository.findAnswerByQuestionIdIn(questionIds);
+        List<Answer> answers = answerRepository.findAnswerByQuestionIdInAndWhetherDeleteIs(questionIds, 0);
         //无词条答案返回空
         if (answers.isEmpty()) {
             return Optional.empty();
