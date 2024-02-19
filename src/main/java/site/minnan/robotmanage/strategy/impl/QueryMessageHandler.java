@@ -225,7 +225,7 @@ public class QueryMessageHandler implements MessageHandler {
         int lv = Integer.parseInt(characterData.getLevel());
         List<LvExp> stageList = lvExpRepository.findByLvGreaterThanEqual(lv, page);
         DateTime now = DateTime.now();
-        if (stageList.isEmpty()) {
+        if (stageList.isEmpty() || sum7 == 0) {
             context.setVariable("levelPredicate", Collections.emptyList());
         } else {
             //计算7日均经验
