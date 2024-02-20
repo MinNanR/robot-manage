@@ -8,20 +8,23 @@ import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
 import com.aliyun.oss.OSS;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import site.minnan.robotmanage.entity.aggregate.Answer;
 import site.minnan.robotmanage.entity.aggregate.Question;
+import site.minnan.robotmanage.entity.aggregate.QuestionGroup;
 import site.minnan.robotmanage.entity.dao.AnswerRepository;
+import site.minnan.robotmanage.entity.dao.QuestionGroupRepository;
 import site.minnan.robotmanage.entity.dao.QuestionRepository;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
+import site.minnan.robotmanage.infrastructure.exception.EntityNotExistException;
 import site.minnan.robotmanage.strategy.MessageHandler;
 
 import java.io.InputStream;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -34,10 +37,11 @@ import java.util.stream.Collectors;
 public class QuestionMessageHandler implements MessageHandler {
 
 
-    public QuestionMessageHandler(OSS oss, QuestionRepository questionRepository, AnswerRepository answerRepository) {
+    public QuestionMessageHandler(OSS oss, QuestionRepository questionRepository, AnswerRepository answerRepository, QuestionGroupRepository questionGroupRepository) {
         this.oss = oss;
         this.questionRepository = questionRepository;
         this.answerRepository = answerRepository;
+        this.questionGroupRepository = questionGroupRepository;
     }
 
     private OSS oss;
@@ -45,6 +49,8 @@ public class QuestionMessageHandler implements MessageHandler {
     private QuestionRepository questionRepository;
 
     private AnswerRepository answerRepository;
+
+    private QuestionGroupRepository questionGroupRepository;
 
 
     private static final String bucketName = "link-server";
@@ -74,27 +80,47 @@ public class QuestionMessageHandler implements MessageHandler {
     }
 
     private Optional<String> addQuestion(MessageDTO dto) {
+        String now = DateTime.now().toString("yyyy-MM-dd HH:mm:ss");
         String message = dto.getRawMessage();
         String[] split = message.substring(4).split("答");
         String questionContent = split[0].strip();
         String answerContent = Arrays.stream(split).skip(1).collect(Collectors.joining("答"));
         String groupId = dto.getGroupId();
-        Question question = questionRepository.findByContentIgnoreCaseAndGroupId(questionContent, groupId);
+        Question question = questionRepository.findByContentIgnoreCaseAndGroupIdAndWhetherDeleteIs(questionContent, groupId, 0);
         if (question == null) {
             question = new Question();
             question.setGroupId(groupId);
             question.setShare(0);
             question.setContent(questionContent);
+            question.setWhetherDelete(0);
             questionRepository.save(question);
-            question = questionRepository.findByContentIgnoreCaseAndGroupId(questionContent, groupId);
+            question = questionRepository.findByContentIgnoreCaseAndGroupIdAndWhetherDeleteIs(questionContent, groupId, 0);
         }
+        question.setUpdater("QQ:" + dto.getSender().userId());
+        question.setUpdateTime(now);
         Integer questionId = question.getId();
         answerContent = enhanceAnswer(answerContent);
 
         Answer answer = new Answer();
         answer.setQuestionId(questionId);
         answer.setContent(answerContent);
+        answer.setWhetherDelete(0);
+        answer.setUpdater("QQ:" + dto.getSender().userId());
+        answer.setUpdateTime(now);
         answerRepository.save(answer);
+
+        Specification<QuestionGroup> questionGroupSpecification = (root, query, builder) -> {
+            Predicate groupIdPredicate = builder.equal(root.get("groupId"), dto.getGroupId());
+            Predicate questionIdPredicate = builder.equal(root.get("questionId"), questionId);
+            return query.where(groupIdPredicate, questionIdPredicate).getRestriction();
+        };
+        Optional<QuestionGroup> relevanceOpt = questionGroupRepository.findOne(questionGroupSpecification);
+        if (relevanceOpt.isEmpty()) {
+            QuestionGroup relevance = new QuestionGroup();
+            relevance.setQuestionId(questionId);
+            relevance.setGroupId(dto.getGroupId());
+            questionGroupRepository.save(relevance);
+        }
 
         String reply = "添加问题成功，问题id：%d".formatted(questionId);
         return Optional.of(reply);
@@ -105,8 +131,21 @@ public class QuestionMessageHandler implements MessageHandler {
         String content = message.substring(4).strip();
 
         Integer questionId = Integer.parseInt(content);
-        questionRepository.deleteById(questionId);
-        answerRepository.deleteByQuestionId(questionId);
+
+        Optional<Question> questionOpt = questionRepository.findById(questionId);
+        Question question = questionOpt.orElseThrow(() -> new EntityNotExistException("问题不存在"));
+        question.setWhetherDelete(1);
+        questionRepository.save(question);
+
+//        questionRepository.deleteById(questionId);
+
+        List<Answer> answers = answerRepository.findAnswerByQuestionIdIn(Collections.singleton(questionId));
+        if (answers.isEmpty()) {
+            return Optional.of("删除成功");
+        }
+        answers.forEach(e -> e.setWhetherDelete(1));
+        answerRepository.saveAll(answers);
+//        answerRepository.deleteByQuestionId(questionId);
 
         return Optional.of("删除成功");
     }
@@ -116,7 +155,12 @@ public class QuestionMessageHandler implements MessageHandler {
         String content = message.substring(4).strip();
 
         Integer answerId = Integer.parseInt(content);
-        answerRepository.deleteById(answerId);
+
+        Optional<Answer> answerOpt = answerRepository.findById(answerId);
+        Answer answer = answerOpt.get();
+        answer.setWhetherDelete(1);
+//        answerRepository.deleteById(answerId);
+        answerRepository.save(answer);
 
         return Optional.of("删除成功");
     }
@@ -127,6 +171,7 @@ public class QuestionMessageHandler implements MessageHandler {
 
         String queryContent = "%" + content + "%";
         List<Question> questions = questionRepository.findAllByContentLikeIgnoreCaseAndGroupId(queryContent, groupId);
+        questions.removeIf(e -> Objects.equals(e.getWhetherDelete(), 0));
 
         if (CollectionUtil.isEmpty(questions)) {
             return Optional.of("无匹配问题");
@@ -160,15 +205,4 @@ public class QuestionMessageHandler implements MessageHandler {
         return answer;
     }
 
-    public static void main(String[] args) {
-        String content = "11[CQ:image,file=save/1e155d2506c44e04a11c6b0f5cfdc685.jpg]22[CQ:image,file=save/851e6e33cd054556947e330fef22e2f3.jpg]33[CQ:image,file=save/460f1ef645824fd8a0333d1cc05dde22.jpg]44[CQ:image,file=save/013986dae1e14a73b65b6e5e6436f0ef.jpg]55";
-//        String content ="111";
-        Pattern pattern = Pattern.compile("(.*)?+(\\[CQ:.*?])");
-        List<String> allGroups = ReUtil.getAllGroups(pattern, content);
-        for (String group : allGroups) {
-            Console.log(group);
-        }
-
-
-    }
 }
