@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Service;
 import site.minnan.robotmanage.entity.aggregate.MaintainRecord;
@@ -18,6 +19,7 @@ import site.minnan.robotmanage.service.MaintainService;
 
 import java.net.Proxy;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -92,11 +94,19 @@ public class MaintainServiceImpl implements MaintainService {
             Element timeEle = children.get(timeElementIndex);
             //元素内两个span，一个是日期，一个是时间
             Elements spans = timeEle.select("span");
-            Element dateSpan = spans.get(0);
-            String dateStr = dateSpan.text();
-            //这里的内容是多个时区的时间，取第一个时间做解析就行
-            String timeHtml = spans.get(1).selectFirst("strong").html();
-            String timeStr = timeHtml.split("<br>")[0];
+            String dateStr, timeStr;
+            if (!spans.isEmpty()) {
+                Element dateSpan = spans.get(0);
+                dateStr = dateSpan.text();
+                //这里的内容是多个时区的时间，取第一个时间做解析就行
+                String timeHtml = spans.get(1).selectFirst("strong").html();
+                timeStr = timeHtml.split("<br>")[0];
+            } else {
+                //傻卵NX发公告格式不固定，有些公告是两个span，有些公告是只有一个strong，这里后续可能还有其他分支
+                List<TextNode> textNodes = timeEle.selectFirst("strong").textNodes();
+                dateStr = textNodes.get(0).text();
+                timeStr = textNodes.get(1).text();
+            }
             //第一个冒号前是时区信息，第一个冒号后是时间信息
             int timezoneAndTimeSplitIndex = timeStr.indexOf(":");
             String timezoneStr = timeStr.substring(0, timezoneAndTimeSplitIndex);
