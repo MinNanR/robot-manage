@@ -7,6 +7,7 @@ import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -22,6 +23,7 @@ import site.minnan.robotmanage.infrastructure.config.ProxyConfig;
 import site.minnan.robotmanage.infrastructure.utils.RedisUtil;
 import site.minnan.robotmanage.service.CharacterSupportService;
 import site.minnan.robotmanage.strategy.MessageHandler;
+import site.minnan.robotmanage.strategy.impl.HolidayMessageHandler;
 
 import java.net.Proxy;
 import java.util.*;
@@ -34,8 +36,11 @@ class DemoApplicationTests {
     QuestionRepository questionRepository;
 
     @Autowired
-    @Qualifier("maintain")
+    @Qualifier("holiday")
     MessageHandler messageHandler;
+
+    @Autowired
+    HolidayMessageHandler holidayMessageHandler;
 
     @Autowired
     CharacterSupportService characterSupportService;
@@ -155,4 +160,9 @@ class DemoApplicationTests {
         System.out.println(s.orElse("11"));
     }
 
+    @Test
+    public void testHoliday() throws JsonProcessingException {
+        Optional<String> s = holidayMessageHandler.handleMessage(null);
+        System.out.println(s.orElse("error"));
+    }
 }
