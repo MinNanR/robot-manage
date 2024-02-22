@@ -62,6 +62,7 @@ public class HolidayMessageHandler implements MessageHandler {
     @Override
     public Optional<String> handleMessage(MessageDTO dto) {
         String infoKey = infoKey();
+        //每天生成生成固定消息
         String content = (String) redisUtil.getValue(infoKey);
         if (StrUtil.isBlank(content)) {
             content = createContent();
@@ -80,16 +81,20 @@ public class HolidayMessageHandler implements MessageHandler {
         String dateString = now.toString("yyyy年M月d日") + now.dayOfWeekEnum().toChinese();
         ChineseDate chineseDate = new ChineseDate(now);
         String chineseDateString = chineseDate.toString();
+        //获取每日提示消息
         HttpResponse res = HttpUtil.createGet("https://timor.tech/api/holiday/tts").execute();
         JSONObject ttsJson = JSONUtil.parseObj(res.body());
         String tts = ttsJson.getStr("tts");
+        //计算下个休息日还有多久
         int nextFreeDayCount = getNextFreeDayCount();
         try {
             List<Holiday> holidays = fetchHoliday();
 
             StringBuilder sb = new StringBuilder();
             sb.append("今天是").append(dateString).append("，").append(chineseDateString);
+            //今天是否是二十四节气中
             String term = chineseDate.getTerm();
+            //今天是否是中国农历节日
             String festivals = chineseDate.getFestivals();
             if (!term.isBlank()) {
                 sb.append("，").append(term);
@@ -101,6 +106,7 @@ public class HolidayMessageHandler implements MessageHandler {
             if (nextFreeDayCount > 0) {
                 sb.append("距离下个休息日还有").append(nextFreeDayCount).append("天\n");
             }
+            //将未来节日加入到消息中
             holidays.stream()
                     .map(e -> e.format(now))
                     .forEach(e -> sb.append(e).append("\n"));
@@ -126,14 +132,17 @@ public class HolidayMessageHandler implements MessageHandler {
         DateTime testDate = DateTime.now();
         int dayCount = 0;
         int size = workDayMap.size();
+        //防止越界或死循环
         while (dayCount < size) {
             String dateString = testDate.toString("yyyy-MM-dd");
+            //在工作日表中查看今天是否为工作日，默认是非工作日
             Boolean isWorkDay = workDayMap.getOrDefault(dateString, false);
             if (isWorkDay) {
                 dayCount++;
             } else {
                 break;
             }
+            //步进一天
             testDate.offset(DateField.DAY_OF_YEAR, 1);
         }
         return dayCount;
@@ -168,6 +177,7 @@ public class HolidayMessageHandler implements MessageHandler {
      */
     public List<Holiday> refreshHoliday() throws JsonProcessingException {
         DateTime now = DateTime.now();
+        //查询未来12个月的假期安排，查询12个月全部数据后（因为有些假期会跨月），再按假期名字分组，取第一天作为假期
         Map<String, Holiday> holidayMap = DateUtil.rangeFunc(now, now.offsetNew(DateField.YEAR, 1),
                         DateField.MONTH, d -> fetchOneMonthData(DateUtil.format(d, "yyyy-MM")))
                 .stream()
@@ -177,6 +187,7 @@ public class HolidayMessageHandler implements MessageHandler {
                                 l -> l.stream().min(Comparator.comparing(Holiday::date)).get())));
 
         //国务院未发布来年假期安排是会没有春节和元旦，手动加上
+        //这里有个逻辑漏洞，1月份查询的时候会查询到明年的春节和元旦，但是实际情况是1月肯定已经公布了今年的假期安排，所以这个漏洞可以忽略
         if (!holidayMap.containsKey("元旦")) {
             DateTime nextYearDate = DateTime.now().offset(DateField.YEAR, 1);
             DateTime newYearDate = DateUtil.beginOfYear(nextYearDate);
@@ -189,12 +200,14 @@ public class HolidayMessageHandler implements MessageHandler {
             holidayMap.put(springFestival.name(), springFestival);
         }
 
+        //将假期数据按时间由近到远排序
         List<Holiday> holidayList = holidayMap.values()
                 .stream().sorted(Comparator.comparing(Holiday::date))
                 .collect(Collectors.toList());
         //删除已经过了的节日
         holidayList.removeIf(e -> now.isAfterOrEquals(e.date()));
         holidayList.sort(Comparator.comparing(Holiday::date));
+        //Jackson可以处理record类序列化，hutool处理不了record类的json序列化
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd"));
         String redisCache = objectMapper.writeValueAsString(holidayList);
@@ -233,6 +246,9 @@ public class HolidayMessageHandler implements MessageHandler {
     }
 
 
+    /**
+     * 更新工作日映射表
+     */
     @PostConstruct
     public void refreshWorkDay() {
         DateTime now = DateTime.now();
@@ -244,10 +260,12 @@ public class HolidayMessageHandler implements MessageHandler {
         JSONObject holiday = jsonObject.getJSONObject("holiday");
 
         DateTime endOfYear = DateUtil.endOfYear(now);
+        //从今天更新到今年最后一天
         DateUtil.rangeConsume(now, endOfYear, DateField.DAY_OF_MONTH, date -> {
             DateTime dateTime = DateTime.of(date);
             String monthAndDay = dateTime.toString("MM-dd");
             String dateString = dateTime.toString("yyyy-MM-dd");
+            //假日表里有一天，就根据数据判断是不是工作日。否则看是不是周末
             boolean isWorkDay = holiday.containsKey(monthAndDay) ?
                     !holiday.getJSONObject(monthAndDay).getBool("holiday")
                     : !dateTime.isWeekend();
