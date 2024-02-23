@@ -63,7 +63,8 @@ public class HolidayMessageHandler implements MessageHandler {
     public Optional<String> handleMessage(MessageDTO dto) {
         String infoKey = infoKey();
         //每天生成生成固定消息
-        String content = (String) redisUtil.getValue(infoKey);
+//        String content = (String) redisUtil.getValue(infoKey);
+        String content = null;
         if (StrUtil.isBlank(content)) {
             content = createContent();
             redisUtil.valueSet(infoKey, content, Duration.ofDays(1));
@@ -82,9 +83,9 @@ public class HolidayMessageHandler implements MessageHandler {
         ChineseDate chineseDate = new ChineseDate(now);
         String chineseDateString = chineseDate.toString();
         //获取每日提示消息
-        HttpResponse res = HttpUtil.createGet("https://timor.tech/api/holiday/tts").execute();
-        JSONObject ttsJson = JSONUtil.parseObj(res.body());
-        String tts = ttsJson.getStr("tts");
+//        HttpResponse res = HttpUtil.createGet("https://timor.tech/api/holiday/tts").execute();
+//        JSONObject ttsJson = JSONUtil.parseObj(res.body());
+//        String tts = ttsJson.getStr("tts");
         //计算下个休息日还有多久
         int nextFreeDayCount = getNextFreeDayCount();
         try {
@@ -110,16 +111,15 @@ public class HolidayMessageHandler implements MessageHandler {
             holidays.stream()
                     .map(e -> e.format(now))
                     .forEach(e -> sb.append(e).append("\n"));
-            sb.append(tts);
+//            sb.append(tts);
 
             return sb.toString();
         } catch (JsonProcessingException e) {
             log.error("创建日期失败", e);
             return """
                     今天是%s，%s,
-                    %s
-                    """.formatted(dateString, chineseDateString,
-                    tts);
+                    距离下一个休息日还有%d天
+                    """.formatted(dateString, chineseDateString, nextFreeDayCount);
         }
     }
 
@@ -186,6 +186,11 @@ public class HolidayMessageHandler implements MessageHandler {
                         Collectors.collectingAndThen(Collectors.toList(),
                                 l -> l.stream().min(Comparator.comparing(Holiday::date)).get())));
 
+        //删除已经过了的节日
+        holidayMap = holidayMap.entrySet().stream()
+                .filter(entry -> now.isBefore(entry.getValue().date()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e2));
+
         //国务院未发布来年假期安排是会没有春节和元旦，手动加上
         //这里有个逻辑漏洞，1月份查询的时候会查询到明年的春节和元旦，但是实际情况是1月肯定已经公布了今年的假期安排，所以这个漏洞可以忽略
         if (!holidayMap.containsKey("元旦")) {
@@ -199,14 +204,10 @@ public class HolidayMessageHandler implements MessageHandler {
             Holiday springFestival = new Holiday(chineseDate.getGregorianDate(), "春节");
             holidayMap.put(springFestival.name(), springFestival);
         }
-
         //将假期数据按时间由近到远排序
         List<Holiday> holidayList = holidayMap.values()
                 .stream().sorted(Comparator.comparing(Holiday::date))
                 .collect(Collectors.toList());
-        //删除已经过了的节日
-        holidayList.removeIf(e -> now.isAfterOrEquals(e.date()));
-        holidayList.sort(Comparator.comparing(Holiday::date));
         //Jackson可以处理record类序列化，hutool处理不了record类的json序列化
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd"));

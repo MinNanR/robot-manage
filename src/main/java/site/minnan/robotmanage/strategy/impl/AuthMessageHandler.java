@@ -117,10 +117,10 @@ public class AuthMessageHandler implements MessageHandler {
 
         Integer authNumber = auth.getAuthNumber();
         if (modifyNumber > 0) {
-            //修改权限码为正数时，表示添加某个位上的权限，直接相或则位新权限码
+            //修改权限码为正数时，表示添加某个位上的权限，直接相或则为新权限码
             authNumber = authNumber | modifyNumber;
         } else {
-            //修改权限码为负数时，表示移除某给位上的权限，取绝对值的反码，再与原本的权限码相与得到新权限码
+            //修改权限码为负数时，表示移除某个位上的权限，取绝对值的反码，再与原本的权限码相与得到新权限码
             //这里转成字符串再做比特填充后取反码，用字符串可以自己指定比特位数，用Integer类转的话只能做32比特转换
             //后续增加权限类型只需要修改最后一个填充长度就可以
             String newAuthBin = StrUtil.fillBefore(Integer.toBinaryString(Math.abs(modifyNumber)), '0', 9);

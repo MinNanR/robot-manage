@@ -40,7 +40,7 @@ public class BotServiceImpl implements BotService {
         } catch (Exception e) {
             log.info("处理消息异常", e);
         }
-        String message = resultOption.orElse(fallBackMessage());
+        String message = resultOption.orElseGet(this::fallBackMessage);
         return BotReply.of(0, message);
     }
 
