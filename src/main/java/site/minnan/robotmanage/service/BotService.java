@@ -1,6 +1,7 @@
 package site.minnan.robotmanage.service;
 
 import site.minnan.robotmanage.entity.dto.MessageDTO;
+import site.minnan.robotmanage.entity.dto.SendMessageDTO;
 import site.minnan.robotmanage.entity.vo.bot.BotReply;
 
 public interface BotService {
@@ -13,4 +14,10 @@ public interface BotService {
      */
     BotReply handleMessage(MessageDTO dto);
 
+    /**
+     * 发送异步回复消息
+     *
+     * @param dto
+     */
+    void sendAsyncMessage(SendMessageDTO dto);
 }

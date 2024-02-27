@@ -16,7 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.templatemode.TemplateMode;
@@ -24,8 +23,10 @@ import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 import site.minnan.robotmanage.entity.aggregate.LvExp;
 import site.minnan.robotmanage.entity.dao.LvExpRepository;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
+import site.minnan.robotmanage.entity.dto.SendMessageDTO;
 import site.minnan.robotmanage.entity.vo.bot.CharacterData;
 import site.minnan.robotmanage.entity.vo.bot.ExpData;
+import site.minnan.robotmanage.service.BotService;
 import site.minnan.robotmanage.service.CharacterSupportService;
 import site.minnan.robotmanage.strategy.MessageHandler;
 
@@ -35,6 +36,9 @@ import java.math.RoundingMode;
 import java.net.Proxy;
 import java.nio.charset.Charset;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 
 /**
@@ -51,6 +55,8 @@ public class QueryMessageHandler implements MessageHandler {
 
     private LvExpRepository lvExpRepository;
 
+    private BotService botService;
+
     private static final Integer billion = 1000000000;
 
     @Value("${query.pythonPath}")
@@ -64,11 +70,24 @@ public class QueryMessageHandler implements MessageHandler {
 
     private Proxy proxy;
 
-    public QueryMessageHandler(CharacterSupportService characterSupportService, LvExpRepository lvExpRepository, Proxy proxy) {
+    private static final ExecutorService queryExecutorPool = Executors.newFixedThreadPool(3);
+
+    /**
+     * 记录每个用户正在查询的用户的查询目标
+     */
+    private static final ConcurrentHashMap<String, String> userQueryTaskMap;
+
+    static {
+        userQueryTaskMap = new ConcurrentHashMap<>();
+    }
+
+    public QueryMessageHandler(CharacterSupportService characterSupportService, LvExpRepository lvExpRepository, BotService botService, Proxy proxy) {
         this.characterSupportService = characterSupportService;
         this.lvExpRepository = lvExpRepository;
+        this.botService = botService;
         this.proxy = proxy;
     }
+
 
     /**
      * 处理消息
@@ -78,6 +97,30 @@ public class QueryMessageHandler implements MessageHandler {
      */
     @Override
     public Optional<String> handleMessage(MessageDTO dto) {
+        String userId = dto.getSender().userId();
+        if (userQueryTaskMap.containsKey(userId)) {
+            String queryContent = userQueryTaskMap.get(userId);
+            String reply = "查询%s进行中，请勿重复操作".formatted(queryContent);
+            return Optional.of(reply);
+        }
+        String queryTarget = dto.getRawMessage().substring(2).strip();
+        userQueryTaskMap.put(userId, queryTarget);
+        queryExecutorPool.submit(() -> {
+            Optional<String> queryResultOpt = doQuery(dto);
+            SendMessageDTO sendMessageDTO = new SendMessageDTO(dto, queryResultOpt.orElse("查询失败"));
+            botService.sendAsyncMessage(sendMessageDTO);
+            userQueryTaskMap.remove(userId);
+        });
+        return Optional.of("");
+    }
+
+    /**
+     * 执行查询任务
+     *
+     * @param dto
+     * @return
+     */
+    public Optional<String> doQuery(MessageDTO dto){
         String userId = dto.getSender().userId();
 
         String message = dto.getRawMessage();
@@ -110,43 +153,6 @@ public class QueryMessageHandler implements MessageHandler {
             return Optional.of("查询失败");
         }
 
-//        StringBuilder sb = new StringBuilder();
-//        String baseInfo = """
-//                角色:%s(%s)
-//                等级:%s - %s （区排名%s,服排名%s）
-//                职业:%s (区排名%s,服排名%s)
-//                """
-//                .formatted(c.getName(), c.getServer(),
-//                        c.getLevel(), c.getExpPercent(), c.getServerLevelRank(), c.getGlobalLevelRank(),
-//                        c.getJob(), c.getServerClassRank(), c.getGlobalClassRank());
-//
-//        sb.append(baseInfo)
-//                .append("---------------------------------\n");
-//        if (c.getAchievementPoints() != null) {
-//            String achievementInfo = "成就值:%s（排名：%s）".formatted(c.getAchievementPoints(), c.getAchievementRank());
-//            sb.append(achievementInfo).append("\n");
-//        }
-//        if (c.getLegionLevel() != null) {
-//            String legionInfo = """
-//                    联盟等级:%s（排名：%s）
-//                    联盟战斗力:%.2f（每日%s币）
-//                    """
-//                    .formatted(c.getLegionLevel(), c.getLegionRank(),
-//                            (float) Integer.parseInt(c.getLegionPower()) / 1000000, c.getLegionCoinsPerDay());
-//            sb.append(legionInfo);
-//        }
-//
-//        List<CharacterData> nearRankList = c.getNearRank();
-//        if (CollUtil.isNotEmpty(nearRankList)) {
-//            sb.append("---------------------------------\n")
-//                    .append("职业排名附近的人：\n");
-//            for (CharacterData nearRank : nearRankList) {
-//                String rankLine = "%s-%s:%s(%s)\n".formatted(nearRank.getServerClassRank(), nearRank.getName(),
-//                        nearRank.getLevel(), nearRank.getExpPercent());
-//                sb.append(rankLine);
-//            }
-//        }
-//
         createPic(c);
         int queryCount = characterSupportService.getQueryCount(queryTarget, dto.getSender().userId());
         if (queryCount >= 3) {

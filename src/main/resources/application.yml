@@ -22,15 +22,6 @@ spring:
       database: 2
       password: minnan
 
-#    database-platform: org.hibernate.community.dialect.SQLiteDialect
-
-#    hikari:
-#      max-lifetime: 600000
-#      allow-pool-suspension: true
-#      register-mbeans: true
-#      idle-timeout: 60000
-#      connection-timeout: 60000
-
 
 server:
   port: 8102
@@ -65,3 +56,4 @@ query:
 
 groups: 931437070, 667082876
 manager: 978312456
+sendMessageUrl: http://lynn.badeling.site/msg/sendLynnMsg
