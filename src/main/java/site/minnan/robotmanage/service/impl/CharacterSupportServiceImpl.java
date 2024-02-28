@@ -117,7 +117,8 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         //解析名称，角色图片，等级信息，职业信息
         String name = getText.apply("/html/body/main/div/div/div[2]/div[2]/div[1]/div[1]/div/h3");
 //        String img = getText.apply("/html/body/main/div/div/div[2]/div[2]/div[1]/div[1]/div/img");
-        String img = doc.selectXpath("/html/body/main/div/div/div[2]/div[2]/div[1]/div[1]/div/img").get(0).attr("src");
+        Elements imgEles = doc.selectXpath("/html/body/main/div/div/div[2]/div[2]/div[1]/div[1]/div/img");
+        String img = imgEles.isEmpty() ? "" : imgEles.get(0).attr("src");
         String lvInfo = getText.apply("/html/body/main/div/div/div[2]/div[2]/div[1]/div[1]/div/h5");
         String jobInfo = getText.apply("/html/body/main/div/div/div[2]/div[2]/div[1]/div[1]/div/p");
         //正则解析等级，经验百分比

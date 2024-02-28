@@ -13,6 +13,7 @@ import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONObject;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
@@ -26,6 +27,7 @@ import site.minnan.robotmanage.entity.dto.MessageDTO;
 import site.minnan.robotmanage.entity.dto.SendMessageDTO;
 import site.minnan.robotmanage.entity.vo.bot.CharacterData;
 import site.minnan.robotmanage.entity.vo.bot.ExpData;
+import site.minnan.robotmanage.infrastructure.utils.RedisUtil;
 import site.minnan.robotmanage.service.BotService;
 import site.minnan.robotmanage.service.CharacterSupportService;
 import site.minnan.robotmanage.strategy.MessageHandler;
@@ -35,6 +37,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.Proxy;
 import java.nio.charset.Charset;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -57,6 +60,8 @@ public class QueryMessageHandler implements MessageHandler {
 
     private BotService botService;
 
+    private RedisUtil redisUtil;
+
     private static final Integer billion = 1000000000;
 
     @Value("${query.pythonPath}")
@@ -75,7 +80,9 @@ public class QueryMessageHandler implements MessageHandler {
     /**
      * 记录每个用户正在查询的用户的查询目标
      */
-    private static final ConcurrentHashMap<String, String> userQueryTaskMap;
+    public static final ConcurrentHashMap<String, MessageDTO> userQueryTaskMap;
+
+    private static final String USER_QUERY_TASK_KEY_TEMPLATE = "query:%s";
 
     static {
         userQueryTaskMap = new ConcurrentHashMap<>();
@@ -88,6 +95,10 @@ public class QueryMessageHandler implements MessageHandler {
         this.proxy = proxy;
     }
 
+    @Autowired
+    public void setRedisUtil(RedisUtil redisUtil) {
+        this.redisUtil = redisUtil;
+    }
 
     /**
      * 处理消息
@@ -98,18 +109,23 @@ public class QueryMessageHandler implements MessageHandler {
     @Override
     public Optional<String> handleMessage(MessageDTO dto) {
         String userId = dto.getSender().userId();
-        if (userQueryTaskMap.containsKey(userId)) {
-            String queryContent = userQueryTaskMap.get(userId);
+        String taskKey = USER_QUERY_TASK_KEY_TEMPLATE.formatted(userId);
+        if (redisUtil.hasKey(taskKey)) {
+            String queryContent = (String) redisUtil.getValue(taskKey);
             String reply = "查询%s进行中，请勿重复操作".formatted(queryContent);
             return Optional.of(reply);
         }
         String queryTarget = dto.getRawMessage().substring(2).strip();
-        userQueryTaskMap.put(userId, queryTarget);
+        redisUtil.valueSet(taskKey, queryTarget, Duration.ofMinutes(3));
+        userQueryTaskMap.put(userId, dto);
         queryExecutorPool.submit(() -> {
             Optional<String> queryResultOpt = doQuery(dto);
             SendMessageDTO sendMessageDTO = new SendMessageDTO(dto, queryResultOpt.orElse("查询失败"));
-            botService.sendAsyncMessage(sendMessageDTO);
-            userQueryTaskMap.remove(userId);
+            if (userQueryTaskMap.containsKey(userId)) {
+                botService.sendAsyncMessage(sendMessageDTO);
+                redisUtil.delete(taskKey);
+                userQueryTaskMap.remove(userId);
+            }
         });
         return Optional.of("");
     }
