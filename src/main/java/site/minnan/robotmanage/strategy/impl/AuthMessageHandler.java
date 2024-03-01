@@ -123,7 +123,7 @@ public class AuthMessageHandler implements MessageHandler {
             //修改权限码为负数时，表示移除某个位上的权限，取绝对值的反码，再与原本的权限码相与得到新权限码
             //这里转成字符串再做比特填充后取反码，用字符串可以自己指定比特位数，用Integer类转的话只能做32比特转换
             //后续增加权限类型只需要修改最后一个填充长度就可以
-            String newAuthBin = StrUtil.fillBefore(Integer.toBinaryString(Math.abs(modifyNumber)), '0', 9);
+            String newAuthBin = StrUtil.fillBefore(Integer.toBinaryString(Math.abs(modifyNumber)), '0', 10);
             //取反操作
             String newAuthRevBin = newAuthBin
                     .replace("0", "2")
@@ -163,6 +163,7 @@ public class AuthMessageHandler implements MessageHandler {
                 BOSS复制权限：%s
                 使用权限：%s
                 检测维护权限：%s
+                统计数据权限：%s
                 """.formatted(f.apply((authNumber & 1) != 0),
                 f.apply(((authNumber >> 1) & 1) != 0),
                 f.apply(((authNumber >> 2) & 1) != 0),
@@ -170,7 +171,8 @@ public class AuthMessageHandler implements MessageHandler {
                 f.apply(((authNumber >> 4) & 1) != 0),
                 f.apply(((authNumber >> 5) & 1) != 0),
                 f.apply((((authNumber >> 6) & 1) ^ 1) != 0),
-                f.apply(((authNumber >> 7) & 1) != 0));
+                f.apply(((authNumber >> 7) & 1) != 0),
+                f.apply(((authNumber >> 9) & 1) != 0));
 
         return message;
 

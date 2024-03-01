@@ -1,10 +1,7 @@
 package site.minnan.robotmanage.entity.aggregate;
 
 import cn.hutool.core.util.NumberUtil;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Data;
 
 @Data
@@ -13,6 +10,7 @@ import lombok.Data;
 public class Boss {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     /**

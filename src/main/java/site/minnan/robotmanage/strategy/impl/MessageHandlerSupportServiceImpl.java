@@ -11,6 +11,7 @@ import site.minnan.robotmanage.entity.aggregate.HandlerStrategy;
 import site.minnan.robotmanage.entity.dao.AuthRepository;
 import site.minnan.robotmanage.entity.dao.StrategyRepository;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
+import site.minnan.robotmanage.service.StatisticsService;
 import site.minnan.robotmanage.strategy.MessageHandler;
 import site.minnan.robotmanage.strategy.MessageHandlerSupportService;
 
@@ -31,13 +32,16 @@ public class MessageHandlerSupportServiceImpl implements MessageHandlerSupportSe
 
     private AuthRepository authRepository;
 
+    private StatisticsService statisticsService;
+
     private ApplicationContext applicationContext;
 
     private static final String DEFAULT_HANDLER_NAME = "default";
 
-    public MessageHandlerSupportServiceImpl(StrategyRepository strategyRepository, AuthRepository authRepository) {
+    public MessageHandlerSupportServiceImpl(StrategyRepository strategyRepository, AuthRepository authRepository, StatisticsService statisticsService) {
         this.strategyRepository = strategyRepository;
         this.authRepository = authRepository;
+        this.statisticsService = statisticsService;
     }
 
     @Override
@@ -75,11 +79,13 @@ public class MessageHandlerSupportServiceImpl implements MessageHandlerSupportSe
                     continue;
                 }
                 log.info("消息[{}]全匹配命中处理策略[{}]", messageId, strategy.getStrategyName());
+                statisticsService.refer(strategy);
                 return applicationContext.getBean(componentName, MessageHandler.class);
             } else if (expressionType == 2 && ReUtil.isMatch(expression, rawMessage)) {
                 if ((authMask != 0) && (auth & authMask) == 0) {
                     continue;
                 }
+                statisticsService.refer(strategy);
                 log.info("消息[{}]正则命中处理策略[{}]", messageId, strategy.getStrategyName());
                 return applicationContext.getBean(componentName, MessageHandler.class);
             }
