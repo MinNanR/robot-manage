@@ -13,6 +13,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.tags.EditorAwareTag;
 import site.minnan.robotmanage.entity.aggregate.MaintainRecord;
 import site.minnan.robotmanage.entity.dao.MaintainRecordRepository;
 import site.minnan.robotmanage.service.MaintainService;
@@ -39,6 +40,10 @@ public class MaintainServiceImpl implements MaintainService {
     private Proxy proxy;
 
     private MaintainRecordRepository maintainRecordRepository;
+
+    //日期格式化器，EEEE是星期几英文的全写，简写是EE，MMMM是月份英文的全写，缩写是MMM，a是匹配AM/PM
+    DateTimeFormatter timeFormatter1 = DateTimeFormatter.ofPattern("EEEE, MMMM dd, yyyy h:mm a", Locale.ENGLISH);
+    DateTimeFormatter timeFormatter2 = DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy h:mm a", Locale.ENGLISH);
 
     public MaintainServiceImpl(Proxy proxy, MaintainRecordRepository maintainRecordRepository) {
         this.proxy = proxy;
@@ -115,10 +120,17 @@ public class MaintainServiceImpl implements MaintainService {
             String timeDeltaString = ReUtil.getGroup1("UTC\\s(-?\\d)", timezoneStr);
             //时区偏移量
             int timeDelta = Integer.parseInt(timeDeltaString);
-            //日期格式化器，EEEE是星期几英文的全写，简写是EE，MMMM是月份英文的全写，缩写是MMM，a是匹配AM/PM
-            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("EEEE, MMMM dd, yyyy h:mm a", Locale.ENGLISH);
+
             //开始时间和结束时间是用 “-“ 分割
             String[] timeSplit = startAndEndTimeString.split("-");
+            //2024年3月8日优化，公告回出现带序数的日期，如，Friday, March 22nd, 2024
+            DateTimeFormatter timeFormatter;
+            if (ReUtil.contains("(\\d+)[(th)|(st)|(rd)|(nd)]+", dateStr)) {
+                dateStr = dateStr.replaceAll("(\\d+)[(th)|(st)|(rd)|(nd)]+", "$1");
+                timeFormatter = timeFormatter2;
+            } else {
+                timeFormatter = timeFormatter1;
+            }
             //解析维护时间
             DateTime startTime = DateUtil.parse(dateStr + " " + timeSplit[0].strip(), timeFormatter);
             DateTime endTime = DateUtil.parse(dateStr + " " + timeSplit[1].strip(), timeFormatter);
@@ -151,5 +163,15 @@ public class MaintainServiceImpl implements MaintainService {
         String now = DateTime.now().toString("yyyy-MM-dd HH:mm");
         MaintainRecord record = maintainRecordRepository.findFirstByEndTimeGreaterThanEqualOrderByStartTimeDesc(now);
         return Optional.ofNullable(record);
+    }
+
+
+    public static void main(String[] args) {
+        String dateStr = "Friday, March 8th, 2024";
+        String s = dateStr.replaceAll("(\\d+)[(th)|(st)|(rd)|(nd)]+", "$1");
+        System.out.println(ReUtil.contains("(\\d+)[(th)|(st)|(rd)|(nd)]+", dateStr));
+//        DateTimeFormatter pattern = DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy", Locale.ENGLISH);
+//        DateTime time = DateUtil.parse(dateStr, pattern);
+//        System.out.println(time);
     }
 }
