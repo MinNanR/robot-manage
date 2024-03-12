@@ -1,9 +1,11 @@
 package site.minnan.robotmanage.strategy.impl;
 
+import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.date.ChineseDate;
 import cn.hutool.core.date.DateField;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.date.chinese.LunarFestival;
 import cn.hutool.core.lang.Console;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpResponse;
@@ -18,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import site.minnan.robotmanage.entity.dto.Holiday;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
+import site.minnan.robotmanage.infrastructure.utils.GregorianFestival;
 import site.minnan.robotmanage.infrastructure.utils.RedisUtil;
 import site.minnan.robotmanage.strategy.MessageHandler;
 
@@ -63,8 +66,8 @@ public class HolidayMessageHandler implements MessageHandler {
     public Optional<String> handleMessage(MessageDTO dto) {
         String infoKey = infoKey();
         //每天生成生成固定消息
-//        String content = (String) redisUtil.getValue(infoKey);
-        String content = null;
+        String content = (String) redisUtil.getValue(infoKey);
+//        String content = null;
         if (StrUtil.isBlank(content)) {
             content = createContent();
             redisUtil.valueSet(infoKey, content, Duration.ofDays(1));
@@ -95,8 +98,13 @@ public class HolidayMessageHandler implements MessageHandler {
             sb.append("今天是").append(dateString).append("，").append(chineseDateString);
             //今天是否是二十四节气中
             String term = chineseDate.getTerm();
-            //今天是否是中国农历节日
-            String festivals = chineseDate.getFestivals();
+//            String festivals = chineseDate.getFestivals();
+            //农历节日
+            List<String> lunarFestivals = LunarFestival.getFestivals(chineseDate.getChineseYear(), chineseDate.getMonth(), chineseDate.getDay());
+            //公历节日
+            List<String> gregorianFestival = GregorianFestival.getFestivals(now);
+            lunarFestivals.addAll(gregorianFestival);
+            String festivals = String.join(",", lunarFestivals);
             if (!term.isBlank()) {
                 sb.append("，").append(term);
             }
