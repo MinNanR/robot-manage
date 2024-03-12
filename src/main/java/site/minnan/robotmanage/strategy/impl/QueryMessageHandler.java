@@ -10,7 +10,13 @@ import cn.hutool.core.util.RuntimeUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
+import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +48,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 /**
@@ -108,6 +115,9 @@ public class QueryMessageHandler implements MessageHandler {
      */
     @Override
     public Optional<String> handleMessage(MessageDTO dto) {
+        if (queryExecutorPool.isShutdown()) {
+            return Optional.of("查询功能已关闭，请稍后再试");
+        }
         String userId = dto.getSender().userId();
         String taskKey = USER_QUERY_TASK_KEY_TEMPLATE.formatted(userId);
         if (redisUtil.hasKey(taskKey)) {
@@ -136,7 +146,7 @@ public class QueryMessageHandler implements MessageHandler {
      * @param dto
      * @return
      */
-    public Optional<String> doQuery(MessageDTO dto){
+    public Optional<String> doQuery(MessageDTO dto) {
         String userId = dto.getSender().userId();
 
         String message = dto.getRawMessage();
@@ -303,6 +313,70 @@ public class QueryMessageHandler implements MessageHandler {
     }
 
     private record ReckonLevel(int lv, String dateLabel) {
+    }
+
+    private static final String TASK_SAVE_KEY = "taskSave";
+
+    /**
+     * 应用关闭时等待所有查询任务结束
+     */
+    public void beforeApplicationShutdown() {
+        queryExecutorPool.shutdown();
+        if (!queryExecutorPool.isTerminated()) {
+            log.info("仍有查询任务进行中，等待查询任务结束");
+            try {
+                boolean terminated = queryExecutorPool.awaitTermination(1, TimeUnit.MINUTES);
+                if (terminated) {
+                    log.info("所有查询任务已结束");
+                    return;
+                }
+            } catch (InterruptedException e) {
+                log.info("等待查询任务结束时线程异常", e);
+            }
+        } else {
+            log.info("没有查询任务进行中，将正常关闭程序");
+            return;
+        }
+
+        log.info("等待查询任务结束超时，将保存查询任务到redis中");
+        Collection<MessageDTO> queryTasks = userQueryTaskMap.values();
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            String tasksJson = objectMapper.writeValueAsString(queryTasks);
+            log.info("保存查询任务,{}", tasksJson);
+            redisUtil.valueSet(TASK_SAVE_KEY, tasksJson, Duration.ofMinutes(5));
+        } catch (JsonProcessingException e) {
+            log.error("序列化查询任务失败");
+        }
+    }
+
+    /**
+     * 恢复查询任务
+     */
+    @PostConstruct
+    public void continueTask() throws JsonProcessingException {
+        if (!redisUtil.hasKey(TASK_SAVE_KEY)) {
+            return;
+        }
+        String taskJson = (String) redisUtil.getValue(TASK_SAVE_KEY);
+        log.info("恢复查询任务,{}", taskJson);
+        ObjectMapper objectMapper = new ObjectMapper();
+        List<MessageDTO> taskList = objectMapper.readValue(taskJson, new TypeReference<>() {
+        });
+        for (MessageDTO dto : taskList) {
+            String userId = dto.getSender().userId();
+            String taskKey = USER_QUERY_TASK_KEY_TEMPLATE.formatted(userId);
+            userQueryTaskMap.put(userId, dto);
+            queryExecutorPool.submit(() -> {
+                Optional<String> queryResultOpt = doQuery(dto);
+                SendMessageDTO sendMessageDTO = new SendMessageDTO(dto, queryResultOpt.orElse("查询失败"));
+                if (userQueryTaskMap.containsKey(userId)) {
+                    botService.sendAsyncMessage(sendMessageDTO);
+                    redisUtil.delete(taskKey);
+                    userQueryTaskMap.remove(userId);
+                }
+            });
+        }
     }
 
 }
