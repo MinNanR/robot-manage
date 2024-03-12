@@ -1,0 +1,58 @@
+spring:
+  mvc:
+    view:
+      prefix: /templates/
+      suffix: .html
+  web:
+    resources:
+      static-locations: classpath:/vendor
+  datasource:
+    url: jdbc:sqlite:F:/Minnan/robot-manage/robot.db
+    driver-class-name: org.sqlite.JDBC
+  jpa:
+    hibernate:
+      ddl-auto: none
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    show-sql: true
+  data:
+    redis:
+      host: minnan.site
+      port: 6379
+      database: 2
+      password: minnan
+
+
+server:
+  port: 8102
+  servlet:
+    context-path: /
+
+jwt:
+  route:
+    authentication:
+      path: /badeling_bot/onMessage, /robot/auth/login
+  header: Authorization
+  expiration: 7200
+  scret: min107
+
+logging:
+  file:
+    name: ./logs/robot-manage.log
+    max-history: 30
+
+
+
+aliyun:
+  bucketName: link-server
+  baseUrl: https://minnan.site:2005
+  receiptFolder: receipt
+  utilityFolder: utility
+
+query:
+  folder: /home/minnan/robot-manage/robotData/queryPic
+  baseUrl: http://minnan.site/robotData/queryPic
+  pythonPath: /home/minnan/robot-manage/create_pic.py
+
+groups: 931437070, 667082876
+manager: 978312456
+sendMessageUrl: http://lynn.badeling.site/msg/sendLynnMsg
