@@ -49,11 +49,11 @@ public class ObjectCollectionNotNullDeepValidator extends Validator {
                 Method getMethod;
                 try {
                     getMethod = elementType.getMethod(methodName);
-                    if(!Collection.class.isAssignableFrom(getMethod.getReturnType())){
-                        log.warn("there is no getter method returning collection for field {} in class" +
-                                " {}", fields, paramType.getName());
-                        continue;
-                    }
+//                    if(!Collection.class.isAssignableFrom(getMethod.getReturnType())){
+//                        log.warn("there is no getter method returning collection for field {} in class" +
+//                                " {}", fields, paramType.getName());
+//                        continue;
+//                    }
                 } catch (NoSuchMethodException e) {
                     log.warn("there is no public getter method for filed {}.{} in class {}", targetField, field,
                             elementType.getName());
