@@ -321,10 +321,12 @@ public class QueryMessageHandler implements MessageHandler {
      * 应用关闭时等待所有查询任务结束
      */
     public void beforeApplicationShutdown() {
+        //关闭线程池
         queryExecutorPool.shutdown();
         if (!queryExecutorPool.isTerminated()) {
             log.info("仍有查询任务进行中，等待查询任务结束");
             try {
+                //等待所有查询任务结束，返回true是全部任务正常结束，返回false是超时
                 boolean terminated = queryExecutorPool.awaitTermination(1, TimeUnit.MINUTES);
                 if (terminated) {
                     log.info("所有查询任务已结束");

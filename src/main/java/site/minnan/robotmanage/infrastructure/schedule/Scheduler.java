@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import site.minnan.robotmanage.service.MaintainService;
+import site.minnan.robotmanage.service.ProxyService;
 import site.minnan.robotmanage.strategy.impl.HolidayMessageHandler;
 
 /**
@@ -20,9 +21,12 @@ public class Scheduler {
 
     private HolidayMessageHandler holidayMessageHandler;
 
-    public Scheduler(MaintainService maintainService, HolidayMessageHandler holidayMessageHandler) {
+    private ProxyService proxyService;
+
+    public Scheduler(MaintainService maintainService, HolidayMessageHandler holidayMessageHandler, ProxyService proxyService) {
         this.maintainService = maintainService;
         this.holidayMessageHandler = holidayMessageHandler;
+        this.proxyService = proxyService;
     }
 
 
@@ -45,4 +49,14 @@ public class Scheduler {
 
     }
 
+    @Scheduled(cron = "0 00,15,30,45 * * * *")
+    public void holdProxy(){
+        log.info("开始检查代理服务器状态");
+        try {
+            proxyService.updateProxy();
+        } catch (InterruptedException e) {
+            log.error("检查代理服务器状态异常", e);
+        }
+        log.info("结束检查代理服务器状态");
+    }
 }

@@ -56,3 +56,4 @@ query:
 groups: 931437070, 667082876
 manager: 978312456
 sendMessageUrl: http://lynn.badeling.site/msg/sendLynnMsg
+proxyUrlPrefix: http://127.0.0.1:2017
