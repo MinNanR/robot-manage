@@ -84,10 +84,13 @@ public class HexaMessageHandler implements MessageHandler {
     @Override
     public Optional<String> handleMessage(MessageDTO dto) {
         String message = dto.getRawMessage();
+        //防止有人多打空格
+        message = ReUtil.replaceAll(message, "\\s+", " ");
         String param = message.replace("hexa", "").strip();
         String[] levelString = param.split(" ");
+
         if (levelString.length != 6) {
-            return Optional.of("请输出正确的计算参数");
+            return Optional.of("请输入正确的计算参数");
         }
         for (String l : levelString) {
             if (!NumberUtil.isNumber(l)) {
@@ -118,11 +121,4 @@ public class HexaMessageHandler implements MessageHandler {
         return Optional.of("\n" + String.join("\n", replyMessage));
     }
 
-    public static void main(String[] args) {
-//        String s = NumberUtil.formatPercent((double) 1660 / 4400, 2);
-//        System.out.println(s);
-        String s = "hexa 19 19 10 1 1 1";
-        String expression = "^hexa.+";
-        System.out.println(ReUtil.isMatch(expression, s));
-    }
 }
