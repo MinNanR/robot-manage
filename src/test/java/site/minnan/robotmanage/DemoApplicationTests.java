@@ -1,42 +1,37 @@
 package site.minnan.robotmanage;
 
-import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.lang.Console;
-import cn.hutool.core.util.ReUtil;
-import cn.hutool.http.HttpResponse;
-import cn.hutool.http.HttpUtil;
+import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Profile;
 import site.minnan.robotmanage.entity.aggregate.Question;
 import site.minnan.robotmanage.entity.dao.QuestionRepository;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
-import site.minnan.robotmanage.infrastructure.config.ProxyConfig;
 import site.minnan.robotmanage.infrastructure.utils.RedisUtil;
 import site.minnan.robotmanage.service.CharacterSupportService;
 import site.minnan.robotmanage.strategy.MessageHandler;
 import site.minnan.robotmanage.strategy.impl.HolidayMessageHandler;
+import site.minnan.robotmanage.strategy.impl.QueryMessageHandler;
 
-import java.net.Proxy;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 
-@SpringBootTest(classes = BotApplication.class)
+@SpringBootTest(classes = BotApplication.class, properties = "spring.profiles.active=dev")
 class DemoApplicationTests {
 
     @Autowired
     QuestionRepository questionRepository;
 
     @Autowired
-    @Qualifier("holiday")
+    @Qualifier("query")
     MessageHandler messageHandler;
 
     @Autowired
@@ -52,8 +47,8 @@ class DemoApplicationTests {
     void contextLoads() {
     }
 
-    private MessageDTO initParam(String message) {
-        String jsonString = "{'raw_message': '#" + message + "', 'group_id': '667082876', 'sender': {'user_id': '978312456'}, 'message_id': '46393'}";
+    private static MessageDTO initParam(String message) {
+        String jsonString = "{'raw_message': '#" + message + "', 'group_id': '667082876', 'sender': {'user_id': '978312456','open_id': '123'}, 'message_id': '46393'}";
         JSONObject jsonObject = JSONUtil.parseObj(jsonString);
         return MessageDTO.fromJson(jsonObject);
     }
@@ -97,8 +92,9 @@ class DemoApplicationTests {
 
     @Test
     public void testQuery() {
-        MessageDTO param = initParam("查询CoderMinnan");
+        MessageDTO param = initParam("查询Karenwang");
         Optional<String> opt = messageHandler.handleMessage(param);
+        ((QueryMessageHandler) messageHandler).beforeApplicationShutdown();
         System.out.println(opt.get());
     }
 
@@ -164,5 +160,25 @@ class DemoApplicationTests {
     public void testHoliday() throws JsonProcessingException {
         Optional<String> s = holidayMessageHandler.handleMessage(null);
         System.out.println(s.orElse("error"));
+//        holidayMessageHandler.refreshHoliday();
     }
+
+    @Test
+    public void testHexa() {
+        MessageDTO param = initParam("hexa 10 10 1 1 1 1");
+        Optional<String> s = messageHandler.handleMessage(param);
+        System.out.println(s.orElse("error"));
+    }
+
+    public static void main(String[] args) throws JsonProcessingException {
+        MessageDTO param = initParam("查询我");
+        ObjectMapper objectMapper = new ObjectMapper();
+        String s = objectMapper.writeValueAsString(Collections.singleton(param));
+        System.out.println(s);
+        System.out.println(JSONUtil.toJsonStr(Collections.singleton(param)));
+        JSONArray array = JSONUtil.parseArray(s);
+        Console.log(array);
+    }
+
+
 }

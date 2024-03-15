@@ -220,9 +220,11 @@ public class QueryMessageHandler implements MessageHandler {
         //截取最后14天经验数据
         expData = ListUtil.sub(expData, expData.size() - 14, expData.size());
         List<String> dateList = expData.stream().map(e -> e.dateLabel()).toList();
+        BigDecimal billionNumber = BigDecimal.valueOf(billion);
         List<Double> expList = expData.stream()
-                .map(e -> e.expDifference())
-                .map(e -> NumberUtil.round(e / billion, 4))
+                .map(e -> BigDecimal.valueOf(e.expDifference()))
+//                .map(e -> NumberUtil.round(e / billion, 4))
+                .map(e -> e.divide(billionNumber, 4, RoundingMode.HALF_UP))
                 .map(e -> e.doubleValue())
                 .toList();
         JSONObject jsonObject = new JSONObject();
@@ -327,7 +329,7 @@ public class QueryMessageHandler implements MessageHandler {
             log.info("仍有查询任务进行中，等待查询任务结束");
             try {
                 //等待所有查询任务结束，返回true是全部任务正常结束，返回false是超时
-                boolean terminated = queryExecutorPool.awaitTermination(1, TimeUnit.MINUTES);
+                boolean terminated = queryExecutorPool.awaitTermination(5, TimeUnit.MINUTES);
                 if (terminated) {
                     log.info("所有查询任务已结束");
                     return;
