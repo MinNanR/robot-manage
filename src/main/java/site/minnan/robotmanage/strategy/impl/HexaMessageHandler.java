@@ -84,10 +84,8 @@ public class HexaMessageHandler implements MessageHandler {
     @Override
     public Optional<String> handleMessage(MessageDTO dto) {
         String message = dto.getRawMessage();
-        //防止有人多打空格
-        message = ReUtil.replaceAll(message, "\\s+", " ");
         String param = message.replace("hexa", "").strip();
-        String[] levelString = param.split(" ");
+        String[] levelString = param.split("\\s+");
 
         if (levelString.length != 6) {
             return Optional.of("请输入正确的计算参数");

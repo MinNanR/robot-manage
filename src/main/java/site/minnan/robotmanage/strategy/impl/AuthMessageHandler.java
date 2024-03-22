@@ -1,17 +1,12 @@
 package site.minnan.robotmanage.strategy.impl;
 
-import cn.hutool.core.lang.Opt;
-import cn.hutool.core.lang.func.Func;
-import cn.hutool.core.map.MapBuilder;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.json.JSONUtil;
 import jakarta.persistence.criteria.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 import site.minnan.robotmanage.entity.aggregate.Auth;
 import site.minnan.robotmanage.entity.dao.AuthRepository;
-import site.minnan.robotmanage.entity.dto.GetNickListDTO;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
 import site.minnan.robotmanage.strategy.MessageHandler;
 
@@ -147,7 +142,6 @@ public class AuthMessageHandler implements MessageHandler {
             return query.where(groupPredicate, userPredicate).getRestriction();
         };
         Optional<Auth> authOpt = authRepository.findOne(specification);
-        log.info(JSONUtil.toJsonStr(authOpt.get()));
 
         Function<Boolean, String> f = b -> b ? "有" : "无";
 

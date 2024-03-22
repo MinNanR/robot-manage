@@ -69,6 +69,7 @@ public class GregorianFestival {
         M_FTV.put(new Pair<>(3, 8), "妇女节");
         M_FTV.put(new Pair<>(3, 12), "植树节");
         M_FTV.put(new Pair<>(3, 15), "国际消费者权益日");
+        M_FTV.put(new Pair<>(3, 21), "世界睡眠日");
 
         M_FTV.put(new Pair<>(4, 1), "愚人节");
         M_FTV.put(new Pair<>(4, 22), "世界地球日");
