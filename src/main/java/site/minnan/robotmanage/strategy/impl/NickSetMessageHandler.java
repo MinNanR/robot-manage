@@ -83,6 +83,7 @@ public class NickSetMessageHandler implements MessageHandler {
 
         String userId = dto.getSender().userId();
         Nick nick = nickRepository.findByQqAndNick(userId, nickName);
+        characterName = characterName.strip();
         if (nick == null) {
             nick = new Nick(userId, nickName, characterName);
         } else {

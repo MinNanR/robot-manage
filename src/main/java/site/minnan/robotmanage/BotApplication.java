@@ -19,9 +19,9 @@ public class BotApplication {
 	public static void main(String[] args) {
 		ConfigurableApplicationContext context = SpringApplication.run(BotApplication.class, args);
 		Signal.handle(new Signal("TERM"), sig -> {
+			log.info("receive signal term");
 			QueryMessageHandler queryMessageHandler = context.getBean("query", QueryMessageHandler.class);
 			queryMessageHandler.beforeApplicationShutdown();
-			log.info("receive signal term");
 			context.close();
 			System.exit(0);
 		});

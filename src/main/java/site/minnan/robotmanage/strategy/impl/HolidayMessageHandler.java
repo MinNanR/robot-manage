@@ -1,12 +1,10 @@
 package site.minnan.robotmanage.strategy.impl;
 
-import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.date.ChineseDate;
 import cn.hutool.core.date.DateField;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.date.chinese.LunarFestival;
-import cn.hutool.core.lang.Console;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
