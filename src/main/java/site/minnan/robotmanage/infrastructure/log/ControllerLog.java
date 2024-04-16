@@ -16,6 +16,12 @@ import java.util.Arrays;
 @Slf4j
 public class ControllerLog {
 
+    private final ObjectMapper objectMapper;
+
+    public ControllerLog(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
+
     @Pointcut("execution(public * site.minnan.robotmanage.controller.*..*(..))")
     private void controllerLog() {
     }
@@ -34,7 +40,6 @@ public class ControllerLog {
         log.info("controller调用{}，参数：{}", methodFullName, jsonArray.toJSONString(0));
         Object retValue = proceedingJoinPoint.proceed();
         time = System.currentTimeMillis() - time;
-        ObjectMapper objectMapper = new ObjectMapper();
         String responseString = objectMapper.writeValueAsString(retValue);
 //        String responseString = new JSONObject(retValue).toJSONString(0);
         log.info("controller调用{}完成，返回数据:{}，用时{}ms", methodFullName, responseString, time);
