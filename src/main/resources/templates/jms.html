@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Layui示例</title>
+    <link rel="stylesheet" href="/layui/css/layui.css">
+    <script src="/layui/layui.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+            integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="layui-tab layui-tab-brief" lay-filter="tab">
+    <ul class="layui-tab-title">
+    </ul>
+</div>
+<div class="layui-form-item">
+    <label class="layui-form-label">日期：</label>
+    <div class="layui-input-inline">
+        <input type="text" class="layui-input" id="yearMonth" placeholder="请选择年月">
+    </div>
+</div>
+<div id="lineChart" style="height: 400px;"></div>
+
+<script>
+    layui.use(['element', 'laydate'], function() {
+        const element = layui.element;
+        const laydate = layui.laydate;
+        const today = new Date();
+        const year = today.getFullYear();
+        let month = today.getMonth() + 1; // 注意月份从 0 开始，需要加 1
+        month = month < 10 ? '0' + month : month; // 如果月份小于 10，在前面加上 '0'
+        var now = `${year}-${month}`;
+
+        const myChart = echarts.init($('#lineChart')[0]);
+        var details = {};
+        const tabIds = [];
+        let tabIndex = 0;
+
+        const option = {
+            xAxis: {
+                name: '日期',
+                type: 'category',
+                data: []
+            },
+            yAxis: {
+                name: '总使用量（GB）',
+                type: 'value'
+            },
+            series: [{
+                data: [],
+                type: 'bar',
+                emphasis: {
+                    focus: 'series'
+                }
+            }],
+            tooltip: {
+                show: true,
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'shadow'
+                },
+                formatter: params => `${params[0].name}<br/>总使用量: ${params[0].value}`
+            }
+        };
+
+        myChart.on('click', params => {
+            const data = details.filter(obj => obj.date === params.name)[0];
+            showPopupChart(params.name, data.details);
+        });
+
+        const query = (id, date) => {
+            $.get(`jms/api/bw/${id}/usage/${date}`, data => {
+                if (data.code === '000') {
+                    const d = data.data;
+                    option.series[0].data = d.map(obj => obj.usageStr.replace(' GB', ''));
+                    option.xAxis.data = d.map(obj => obj.date);
+                    details = d;
+                    myChart.setOption(option);
+                }
+            });
+        };
+
+        element.on('tab(tab)', data => {
+            tabIndex = data.index;
+            query(tabIds[tabIndex], now);
+        });
+
+        $.get('jms/api/jmsConfs', data => {
+            if (data.code === '000') {
+                data.data.forEach(obj => {
+                    element.tabAdd('tab', {
+                        title: obj.alias,
+                        id: obj.id
+                    });
+                    tabIds.push(obj.id);
+                });
+                if (tabIds.length !== 0) {
+                    element.tabChange('tab', tabIds[0]);
+                }
+            }
+        });
+
+        laydate.render({
+            elem: '#yearMonth',
+            max: now,
+            type: 'month',
+            format: 'yyyy-MM',
+            value: now,
+            isInitValue: true,
+            btns: ['now', 'confirm'],
+            done: value => {
+                now = value;
+                query(tabIds[tabIndex], now);
+            }
+        });
+
+        const showPopupChart = (name, data) => {
+            layui.use('layer', () => {
+                const layer = layui.layer;
+                layer.open({
+                    type: 1,
+                    title: `${name} 详细数据`,
+                    area: ['800px', '500px'],
+                    content: '<div id="popupChart" style="width: 100%; height: 400px;"></div>',
+                    shadeClose: true
+                });
+
+                const popupChart = echarts.init($('#popupChart')[0]);
+                const popupOption = {
+                    xAxis: {
+                        name: '小时',
+                        type: 'category',
+                        data: data.map(obj => obj.hour)
+                    },
+                    yAxis: {
+                        name: '总使用量（GB）',
+                        type: 'value'
+                    },
+                    series: [{
+                        data: data.map(obj => obj.usageStr.replace(' GB', '')),
+                        type: 'bar'
+                    }],
+                    tooltip: {
+                        show: true,
+                        trigger: 'axis',
+                        axisPointer: {
+                            type: 'shadow'
+                        },
+                        formatter: params => `${name} ${params[0].name}时<br/>总使用量: ${params[0].value}`
+                    }
+                };
+                popupChart.setOption(popupOption);
+            });
+        };
+    });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.3.2/dist/echarts.min.js"></script>
+</body>
+</html>
