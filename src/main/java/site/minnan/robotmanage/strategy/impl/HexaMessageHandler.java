@@ -84,7 +84,7 @@ public class HexaMessageHandler implements MessageHandler {
     @Override
     public Optional<String> handleMessage(MessageDTO dto) {
         String message = dto.getRawMessage();
-        String param = message.replace("hexa", "").strip();
+        String param = message.toLowerCase().replace("hexa", "").strip();
         String[] levelString = param.split("\\s+");
 
         if (levelString.length != 6) {
