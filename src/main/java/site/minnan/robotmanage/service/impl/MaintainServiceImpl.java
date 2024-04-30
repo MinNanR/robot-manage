@@ -42,8 +42,8 @@ public class MaintainServiceImpl implements MaintainService {
     private MaintainRecordRepository maintainRecordRepository;
 
     //日期格式化器，EEEE是星期几英文的全写，简写是EE，MMMM是月份英文的全写，缩写是MMM，a是匹配AM/PM
-    DateTimeFormatter timeFormatter1 = DateTimeFormatter.ofPattern("EEEE, MMMM dd, yyyy h:mm a", Locale.ENGLISH);
-    DateTimeFormatter timeFormatter2 = DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy h:mm a", Locale.ENGLISH);
+    private static final DateTimeFormatter timeFormatter1 = DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy h:mm a", Locale.ENGLISH);
+    private static final DateTimeFormatter timeFormatter2 = DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy h:mm a", Locale.ENGLISH);
 
     public MaintainServiceImpl(Proxy proxy, MaintainRecordRepository maintainRecordRepository) {
         this.proxy = proxy;

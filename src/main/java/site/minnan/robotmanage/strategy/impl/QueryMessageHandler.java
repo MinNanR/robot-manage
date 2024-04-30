@@ -325,6 +325,11 @@ public class QueryMessageHandler implements MessageHandler {
     public void beforeApplicationShutdown() {
         //关闭线程池
         queryExecutorPool.shutdown();
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            log.error("线程暂停异常", e);
+        }
         if (!queryExecutorPool.isTerminated()) {
             log.info("仍有查询任务进行中，等待查询任务结束");
             try {
@@ -350,7 +355,7 @@ public class QueryMessageHandler implements MessageHandler {
             log.info("保存查询任务,{}", tasksJson);
             redisUtil.valueSet(TASK_SAVE_KEY, tasksJson, Duration.ofMinutes(5));
         } catch (JsonProcessingException e) {
-            log.error("序列化查询任务失败");
+            log.error("序列化查询任务失败", e);
         }
     }
 
