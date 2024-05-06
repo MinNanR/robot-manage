@@ -16,6 +16,8 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.criteria.Predicate;
+import org.apache.tomcat.util.http.fileupload.FileUpload;
+import org.aspectj.util.FileUtil;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -43,6 +45,7 @@ import site.minnan.robotmanage.infrastructure.exception.EntityNotExistException;
 import site.minnan.robotmanage.infrastructure.utils.RedisUtil;
 import site.minnan.robotmanage.service.CharacterSupportService;
 
+import java.io.File;
 import java.net.Proxy;
 import java.time.Duration;
 import java.util.*;
@@ -93,6 +96,8 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         HttpRequest queryRequest = HttpUtil.createGet(queryUrl).setProxy(proxy);
         HttpResponse queryRes = queryRequest.execute();
         String html = queryRes.body();
+
+        FileUtil.writeAsString(new File("F:\\pdf\\" + queryName + ".html"), html);
 
         Document doc = Jsoup.parse(html, "UTF-8");
 
@@ -304,7 +309,7 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
             return queryCache;
         }
 
-        QueryMap queryMap = queryMapRepository.findByQueryContent(queryContent);
+        QueryMap queryMap = queryMapRepository.findByQueryContentIgnoreCase(queryContent);
         if (queryMap == null) {
             throw new EntityNotFoundException();
         }
@@ -422,7 +427,7 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
     @Override
     public void addQueryMap(UpdateQueryMapDTO dto) {
         String queryContent = dto.getQueryContent();
-        QueryMap queryMap = queryMapRepository.findByQueryContent(queryContent);
+        QueryMap queryMap = queryMapRepository.findByQueryContentIgnoreCase(queryContent);
         if (queryMap != null) {
             throw new EntityAlreadyExistException("快捷查询已存在");
         }
