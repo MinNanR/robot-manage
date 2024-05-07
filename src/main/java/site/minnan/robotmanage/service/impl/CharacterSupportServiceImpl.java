@@ -5,6 +5,7 @@ import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.convert.NumberChineseFormatter;
 import cn.hutool.core.date.DateField;
 import cn.hutool.core.date.DateTime;
+import cn.hutool.core.lang.Console;
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.core.util.StrUtil;
@@ -16,7 +17,6 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.criteria.Predicate;
-import org.apache.tomcat.util.http.fileupload.FileUpload;
 import org.aspectj.util.FileUtil;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -27,7 +27,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import site.minnan.robotmanage.entity.aggregate.Nick;
@@ -46,10 +45,13 @@ import site.minnan.robotmanage.infrastructure.utils.RedisUtil;
 import site.minnan.robotmanage.service.CharacterSupportService;
 
 import java.io.File;
+import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.Proxy;
 import java.time.Duration;
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -97,7 +99,6 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         HttpResponse queryRes = queryRequest.execute();
         String html = queryRes.body();
 
-        FileUtil.writeAsString(new File("F:\\pdf\\" + queryName + ".html"), html);
 
         Document doc = Jsoup.parse(html, "UTF-8");
 
@@ -218,6 +219,7 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
      * @return 经验数据
      */
     private List<ExpData> extraExpData(String html) {
+        List<BigDecimal> expProcessList = extraExpProcess(html);
         //经验图渲染函数开始标记
         String functionSpec = "const zmChs=function(a)";
         int index = html.indexOf(functionSpec);
@@ -256,12 +258,16 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         //将解析出来的数据拼合成经验数据
         Iterator<String> dateItr = dateList.iterator();
         Iterator<String> expItr = expList.iterator();
+        Iterator<BigDecimal> processItr = expProcessList.iterator();
         List<ExpData> expDataList = new ArrayList<>();
-        while (dateItr.hasNext() && expItr.hasNext()) {
+        Supplier<Double> getLastProcess = () -> expDataList.isEmpty() ? 0.0 : expDataList.get(expDataList.size() - 1).expProcess();
+        while (dateItr.hasNext() && expItr.hasNext() && processItr.hasNext()) {
             String date = dateItr.next();
             String exp = expItr.next();
+            double expProcess = processItr.next().doubleValue();
             long expNumber = NumberUtil.isNumber(exp) ? Long.parseLong(exp) : 0;
-            ExpData expData = new ExpData(date, expNumber);
+            expProcess = expNumber == 0 ? getLastProcess.get() : expProcess;
+            ExpData expData = new ExpData(date, expNumber, expProcess);
             expDataList.add(expData);
         }
 
@@ -435,5 +441,57 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         queryMap.setQueryContent(dto.getQueryContent());
         queryMap.setQueryUrl(dto.getQueryUrl());
         queryMapRepository.save(queryMap);
+    }
+
+    public static List<BigDecimal> extraExpProcess(String html) {
+//        String html = FileUtil.readAsString(new File("F:\\pdf\\CoderMinnan.html"));
+        Document doc = Jsoup.parse(html);
+        Elements progressLevel = doc.selectXpath("/html/body/main/div/div/div[2]/div[2]/div[2]/div[2]/div[2]/canvas");
+        String id = progressLevel.get(0).attr("id");
+        String spec = "const (.{8})=document\\.getElementById\\('" + id + "'\\)";
+        String p = ReUtil.getGroup1(spec, html);
+
+        int i = html.indexOf("new Chart(" + p + ",");
+        int charIndex = i + ("new Chart(" + p + ",").length();
+        while (html.charAt(charIndex) != '{') {
+            charIndex++;
+        }
+        charIndex++;
+
+        List<Character> objContentList = new ArrayList<>();
+        Stack<Character> bracket = new Stack<>();//花括号匹配栈
+        bracket.add('{');//初始化栈
+        objContentList.add('{');
+        while (!bracket.isEmpty()) {//栈空时表示函数内容结束
+            char c = html.charAt(charIndex);
+            objContentList.add(c);//储存函数内容
+            if (c == '}') {//遇到右括号则弹出一个左括号
+                bracket.pop();
+            } else if (c == '{') {
+                bracket.add('{');//遇到左括号则将左括号压入匹配栈中
+            }
+            charIndex++;
+        }
+
+        String content = objContentList.stream().map(Object::toString).collect(Collectors.joining());
+        String dataLabel = ReUtil.getGroup1("\"data\":(\\[.*\\]),", content);
+        JSONArray dataArray = JSONUtil.parseArray(dataLabel);
+
+        return dataArray.stream()
+                .map(e -> {
+                    try {
+                        return (BigDecimal) e;
+                    } catch (Exception ex){
+                        return BigDecimal.ZERO;
+                    }
+                })
+                .collect(Collectors.toList());
+    }
+
+    public static void main(String[] args) throws IOException {
+        String html = FileUtil.readAsString(new File("F:\\pdf\\CoderMinnan.html"));
+        List<BigDecimal> doubles = extraExpProcess(html);
+        Console.log(doubles.subList(doubles.size() - 14,doubles.size()));
+
     }
 }

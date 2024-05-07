@@ -214,6 +214,13 @@
                 splitLine: {show: false},
                 type: "value",
                 show: true,
+            },
+            {
+                scale: true,
+                // axisLine: {lineStyle: {color: "#8392A5"}, show: true},
+                splitLine: {show: false},
+                type: "value",
+                show: true,
             }
         ],
         grid: {
@@ -240,6 +247,27 @@
                 },
                 itemStyle: {
                     color: "#709ce9"
+                },
+                animation: false
+            },
+            {
+                type: "line",
+                //                name: "经验",
+                data: data.process,
+                smooth: data.smooth,
+                showSymbol: true,
+                lineStyle: {
+                    width: 1,
+                },
+                yAxisIndex: 1,
+                label: {
+                    show: false,
+                    position: 'top',
+                    fontWeight: "bold",
+                    fontSize: 16
+                },
+                itemStyle: {
+                    color: "#FFFFFF"
                 },
                 animation: false
             }

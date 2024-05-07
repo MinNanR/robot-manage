@@ -227,9 +227,13 @@ public class QueryMessageHandler implements MessageHandler {
                 .map(e -> e.divide(billionNumber, 4, RoundingMode.HALF_UP))
                 .map(e -> e.doubleValue())
                 .toList();
+        List<Double> processList = expData.stream()
+                .map(e -> e.expProcess())
+                .toList();
         JSONObject jsonObject = new JSONObject();
         jsonObject.set("noteDate", dateList)
-                .set("exp", expList);
+                .set("exp", expList)
+                .set("process", processList);
 
         List<ExpData> reverseExpData = ListUtil.reverseNew(expData);
 

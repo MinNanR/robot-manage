@@ -1,7 +1,5 @@
 package site.minnan.robotmanage.strategy.impl;
 
-import cn.hutool.core.collection.ListUtil;
-import cn.hutool.core.lang.Console;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.NumberUtil;
 import org.springframework.stereotype.Component;
@@ -10,9 +8,10 @@ import site.minnan.robotmanage.strategy.MessageHandler;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * 属性计算器
@@ -39,7 +38,8 @@ public class StatMessageHandler implements MessageHandler {
         if ("all".equalsIgnoreCase(paramSplit[0])) {
             BigDecimal baseValue = new BigDecimal(paramSplit[1]);
             BigDecimal percentageValue = new BigDecimal(paramSplit[2]);
-            percentageValue = percentageValue.compareTo(BigDecimal.TEN) > 0 ? percentageValue.divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_DOWN) : percentageValue;
+//            percentageValue = percentageValue.compareTo(BigDecimal.TEN) > 0 ? percentageValue.divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_DOWN) : percentageValue;
+            percentageValue = percentageValue.compareTo(BigDecimal.TEN) > 0 ? percentageValue : percentageValue.multiply(new BigDecimal(100));
             String result = allToJobStat(baseValue, percentageValue);
             String reply = """
                     %s
