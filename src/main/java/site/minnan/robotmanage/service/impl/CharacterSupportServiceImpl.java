@@ -325,7 +325,9 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
 
         HttpResponse queryResponse = HttpUtil.createGet(fullQueryUrl).execute();
         String responseJsonString = queryResponse.body();
-        JSONArray queryResultList = JSONUtil.parseArray(responseJsonString);
+        JSONObject responseJson = JSONUtil.parseObj(responseJsonString);
+//        JSONArray queryResultList = JSONUtil.parseArray(responseJsonString);
+        JSONArray queryResultList = responseJson.getJSONArray("ranks");
         if (CollectionUtil.isEmpty(queryResultList)) {
             throw new EntityNotFoundException();
         }
@@ -333,13 +335,13 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         queryResultList.stream()
                 .map(e -> (JSONObject) e)
                 .forEach(e -> {
-                    String key = RANK_CACHE_KEY_TEMPLATE.formatted(today, queryContent, e.getInt("Rank"));
-                    String value = e.getStr("CharacterName");
+                    String key = RANK_CACHE_KEY_TEMPLATE.formatted(today, queryContent, e.getInt("rank"));
+                    String value = e.getStr("characterName");
                     redisUtil.valueSet(key, value, Duration.ofHours(6));
                 });
 
         JSONObject targetCharacter = queryResultList.getJSONObject(0);
-        return targetCharacter.getStr("CharacterName");
+        return targetCharacter.getStr("characterName");
     }
 
     /**

@@ -37,8 +37,7 @@ public class Scheduler {
     @Scheduled(cron = "0 05,20,35,50 * * * *")
     public void detectMaintain() {
         log.info("开始检测官网维护公告");
-        maintainService.detectMaintain();
-        ;
+        maintainService.detectMaintainV2();
         log.info("结束检测官网维护公告");
     }
 

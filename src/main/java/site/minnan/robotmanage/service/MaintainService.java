@@ -2,6 +2,7 @@ package site.minnan.robotmanage.service;
 
 import site.minnan.robotmanage.entity.aggregate.MaintainRecord;
 
+import javax.swing.text.html.Option;
 import java.util.Optional;
 
 /**
@@ -14,6 +15,7 @@ public interface MaintainService {
     /**
      * 探测维护公告
      */
+    @Deprecated
     Optional<MaintainRecord> detectMaintain();
 
     /**
@@ -22,4 +24,6 @@ public interface MaintainService {
      * @return
      */
     Optional<MaintainRecord> getMaintain();
+
+    Optional<MaintainRecord> detectMaintainV2();
 }
