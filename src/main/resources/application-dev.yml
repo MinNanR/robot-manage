@@ -56,3 +56,6 @@ query:
 groups: 931437070, 667082876
 manager: 978312456
 sendMessageUrl: http://lynn.badeling.site/msg/sendLynnMsg
+proxyUrlPrefix: http://minnan.site:2017
+schedulerEnable: false
+#game_version: newAge

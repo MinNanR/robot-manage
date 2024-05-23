@@ -1,7 +1,9 @@
 package site.minnan.robotmanage.infrastructure.schedule;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import site.minnan.robotmanage.service.JmsService;
@@ -17,6 +19,19 @@ import site.minnan.robotmanage.strategy.impl.HolidayMessageHandler;
 @Component
 @Slf4j
 public class Scheduler {
+
+    @Value("${schedulerEnable}")
+    private boolean schedulerEnable;
+
+    @PostConstruct
+    public void log(){
+        if (schedulerEnable) {
+            log.info("定时任务已开启");
+        } else {
+            log.info("定时任务已禁用");
+        }
+    }
+
 
     private MaintainService maintainService;
 

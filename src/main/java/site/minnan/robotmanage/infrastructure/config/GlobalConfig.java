@@ -13,8 +13,8 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class GlobalConfig {
 
-    @Bean
-    @ConditionalOnMissingBean
+//    @Bean
+//    @ConditionalOnMissingBean
     public ObjectMapper objectMapper() {
         final ObjectMapper om = new ObjectMapper();
         om.registerModule(new JavaTimeModule());

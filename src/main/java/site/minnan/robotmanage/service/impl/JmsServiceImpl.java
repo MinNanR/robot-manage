@@ -3,6 +3,7 @@ package site.minnan.robotmanage.service.impl;
 import cn.hutool.http.HttpUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import site.minnan.robotmanage.entity.aggregate.jms.JmsConf;
@@ -32,9 +33,12 @@ public class JmsServiceImpl implements JmsService {
     private final JmsUsageRepository jmsUsageRepository;
 
     public JmsServiceImpl(ObjectMapper objectMapper, JmsConfRepository jmsConfRepository, JmsUsageRepository jmsUsageRepository) {
-        this.objectMapper = objectMapper;
+//        this.objectMapper = objectMapper;
         this.jmsConfRepository = jmsConfRepository;
         this.jmsUsageRepository = jmsUsageRepository;
+        final ObjectMapper om = new ObjectMapper();
+        om.registerModule(new JavaTimeModule());
+        this.objectMapper = om;
     }
 
     @Override

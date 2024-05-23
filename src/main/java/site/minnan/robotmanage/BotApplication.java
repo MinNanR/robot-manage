@@ -11,7 +11,7 @@ import site.minnan.robotmanage.strategy.impl.QueryMessageHandler;
 import sun.misc.Signal;
 
 @SpringBootApplication
-@EnableScheduling
+//@EnableScheduling
 @Slf4j
 //@EnableCaching
 public class BotApplication {
