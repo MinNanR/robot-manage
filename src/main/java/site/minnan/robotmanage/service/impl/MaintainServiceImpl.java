@@ -229,6 +229,10 @@ public class MaintainServiceImpl implements MaintainService {
         } else {
             //傻卵NX发公告格式不固定，有些公告是两个span，有些公告是只有一个strong，这里后续可能还有其他分支
             List<TextNode> textNodes = timeEle.selectFirst("strong").textNodes();
+            if (textNodes.size() < 2) {
+                //分开了两个P标签
+                textNodes = timeEle.select("strong").textNodes();
+            }
             dateStr = textNodes.get(0).text();
             timeStr = textNodes.get(1).text();
         }
