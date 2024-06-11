@@ -1,9 +1,8 @@
 package site.minnan.robotmanage.strategy.impl;
 
+import cn.hutool.core.map.MapBuilder;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.NumberUtil;
-import jakarta.annotation.PostConstruct;
-import org.apache.commons.codec.binary.Hex;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
@@ -48,17 +47,18 @@ public class HexaMessageHandler implements MessageHandler {
     };
 
     private static final int[] USAGE_COMMON = new int[]{
-            125, 38, 44, 50, 57, 63, 69, 75, 72, 300,
+            0, 125, 38, 44, 50, 57, 63, 69, 75, 72, 300,
             110, 124, 138, 152, 165, 179, 193, 207, 220,
             525, 234, 248, 262, 275, 289, 303, 317, 330, 344, 750
     };
 
     /**
      * 储存六转各技能信息
+     *
      * @param usageMatrix 需求数量矩阵
-     * @param usageTotal 各技能需求总量
+     * @param usageTotal  各技能需求总量
      * @param label
-     * @param grandTotal 总需求量
+     * @param grandTotal  总需求量
      */
     private record HexaInfo(int[][] usageMatrix, int[] usageTotal, String[] label, int grandTotal) {
     }
@@ -70,6 +70,12 @@ public class HexaMessageHandler implements MessageHandler {
 //    private static final HexaInfo dreamerHexa;
 
     private static final Map<String, HexaInfo> hexaVersion;
+
+    private record Range(int start, int end) {
+    }
+
+    //第一层键，版本名称，第二层键，分技能查询的名称，
+    private static final Map<String, Map<String, Range>> partInfoMap;
 
 
     /**
@@ -91,7 +97,7 @@ public class HexaMessageHandler implements MessageHandler {
 
     private static final String VERSION_NEW_AGE = "newAge";
 
-    private static final String VERSION_DREAMER= "dreamer";
+    private static final String VERSION_DREAMER = "dreamer";
 
     static {
         int skillTotal = Arrays.stream(USAGE_SKILL).sum();
@@ -114,6 +120,23 @@ public class HexaMessageHandler implements MessageHandler {
         hexaVersion.put(VERSION_DREAMER, dreamerHexa);
 //        GRAND_TOTAL = skillTotal + masteryTotal + enhanceTotal * 4;
 //        USAGE_TOTAL = new int[]{skillTotal, masteryTotal, enhanceTotal, enhanceTotal, enhanceTotal, enhanceTotal};
+        Map<String, Range> partNewAge = MapBuilder.create(new HashMap<String, Range>())
+                .put("H", new Range(0, 1))
+                .put("精通", new Range(1, 2))
+                .put("V", new Range(2, 6))
+                .build();
+
+        Map<String, Range> partDreamer = MapBuilder.create(new HashMap<String, Range>())
+                .put("H", new Range(0, 1))
+                .put("精通", new Range(1, 3))
+                .put("V", new Range(3, 7))
+                .put("通用", new Range(7, 8))
+                .build();
+
+        partInfoMap = new HashMap<>();
+        partInfoMap.put(VERSION_NEW_AGE, partNewAge);
+        partInfoMap.put(VERSION_DREAMER, partDreamer);
+
 
     }
 
@@ -131,20 +154,23 @@ public class HexaMessageHandler implements MessageHandler {
     public Optional<String> handleMessage(MessageDTO dto) {
         String message = dto.getRawMessage();
         String param = message.toLowerCase().replace("hexa", "").strip();
-        String[] levelString = param.split("\\s+");
+        String[] paramString = param.split("\\s+");
+        if (!NumberUtil.isNumber(paramString[0])) {
+            return partCalculator(paramString);
+        }
 
         HexaInfo hexaInfo = hexaVersion.get(gameVersion);
 
 
-        if (levelString.length != hexaInfo.usageTotal.length) {
+        if (paramString.length != hexaInfo.usageTotal.length) {
             return Optional.of("请输入正确的计算参数");
         }
-        for (String l : levelString) {
+        for (String l : paramString) {
             if (!NumberUtil.isNumber(l)) {
                 return Optional.of("请输入正确的计算参数");
             }
         }
-        int[] levels = Stream.of(levelString).mapToInt(Integer::parseInt).toArray();
+        int[] levels = Stream.of(paramString).mapToInt(Integer::parseInt).toArray();
 
         List<String> replyMessage = new ArrayList<>();
         int total = 0;
@@ -169,8 +195,46 @@ public class HexaMessageHandler implements MessageHandler {
         return Optional.of("\n" + String.join("\n", replyMessage));
     }
 
-    @PostConstruct
-    public void test() {
-        System.out.println(gameVersion);
+
+    /**
+     * 局部计算六转核心
+     *
+     * @param paramString
+     * @return
+     */
+    public Optional<String> partCalculator(String[] paramString) {
+        Map<String, Range> detailMap = partInfoMap.get(gameVersion);
+        HexaInfo hexaInfo = hexaVersion.get(gameVersion);
+
+        String partName = paramString[0].toUpperCase();
+        Range range = detailMap.get(partName);
+        if (range == null) {
+            return Optional.of("请输入正确的计算参数");
+        }
+        if (paramString.length - 1 != range.end - range.start) {
+            return Optional.of("请输入正确的计算参数");
+        }
+        for (int i = 1; i < paramString.length; i++) {
+            if (!NumberUtil.isNumber(paramString[i])) {
+                return Optional.of("请输入正确的计算参数");
+            }
+        }
+        int[] levels = Stream.of(paramString).skip(1).mapToInt(Integer::parseInt).toArray();
+
+        List<String> replyMessage = new ArrayList<>();
+        for (int i = 0; i < levels.length; i++) {
+            int level = levels[i];
+            if (level < 0 || level > 30) {
+                return Optional.of("请输入正确的计算参数");
+            }
+            int[] usage = hexaInfo.usageMatrix[i + range.start];
+            int totalSpent = Arrays.stream(ArrayUtil.sub(usage, 0, level + 1)).sum();
+            int totalNeed = hexaInfo.usageTotal[i + range.start];
+            int needToMax = totalNeed - totalSpent;
+            String process = NumberUtil.formatPercent((double) totalSpent / totalNeed, 2);
+            String line = "%s: %d/%d，还需%d个小核升满，进度%s".formatted(hexaInfo.label[i + range.start], totalSpent, totalNeed, needToMax, process);
+            replyMessage.add(line);
+        }
+        return Optional.of("\n" + String.join("\n", replyMessage));
     }
 }
