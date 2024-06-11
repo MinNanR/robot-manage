@@ -35,18 +35,14 @@ public class StatMessageHandler implements MessageHandler {
         String message = dto.getRawMessage();
         String[] paramSplit = message
                 .replaceAll("[!！]", "").split("\\s+");
-        if ("all".equalsIgnoreCase(paramSplit[0])) {
+        if ("%".equalsIgnoreCase(paramSplit[0])) {
             BigDecimal baseValue = new BigDecimal(paramSplit[1]);
             BigDecimal percentageValue = new BigDecimal(paramSplit[2]);
 //            percentageValue = percentageValue.compareTo(BigDecimal.TEN) > 0 ? percentageValue.divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_DOWN) : percentageValue;
             percentageValue = percentageValue.compareTo(BigDecimal.TEN) > 0 ? percentageValue : percentageValue.multiply(new BigDecimal(100));
             String result = allToJobStat(baseValue, percentageValue);
-            String reply = """
-                    %s
-                    此计算结果仅为1all对应主属面板的变化，实际伤害计算时还会加上副属性计算，所以实际值比计算结果要更高一点
-                    """.formatted(result);
-            return Optional.of("\n" + reply);
-        } else if ("alls".equalsIgnoreCase(paramSplit[0])) {
+            return Optional.of(result);
+        } else if ("all".equalsIgnoreCase(paramSplit[0]) || "alls".equalsIgnoreCase(paramSplit[0])) {
             BigDecimal baseMain = new BigDecimal(paramSplit[1]);
             BigDecimal percentageMain = new BigDecimal(paramSplit[2]);
             percentageMain = percentageMain.compareTo(BigDecimal.TEN) > 0 ? percentageMain.divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_DOWN) : percentageMain;
@@ -70,7 +66,7 @@ public class StatMessageHandler implements MessageHandler {
      */
     public String allToJobStat(BigDecimal baseValue, BigDecimal percentageValue) {
         BigDecimal equivalent = baseValue.divide(BigDecimal.valueOf(100).add(percentageValue), 4, RoundingMode.FLOOR);
-        return "1all=%s".formatted(NumberUtil.decimalFormat("#.##", equivalent));
+        return "1%%=%s".formatted(NumberUtil.decimalFormat("#.##", equivalent));
     }
 
     private String allToStatValue(BigDecimal baseMain, BigDecimal mainPercentage, List<BigDecimal> baseSecondary) {
