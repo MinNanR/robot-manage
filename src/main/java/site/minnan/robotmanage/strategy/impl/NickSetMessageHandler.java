@@ -77,6 +77,9 @@ public class NickSetMessageHandler implements MessageHandler {
         if (nickName.isBlank()) {
             return Optional.of("查询关键字不能为空");
         }
+        if (characterName.isBlank()) {
+            return Optional.of("绑定角色名称不能为空");
+        }
         if (!validateQueryNick(nickName)) {
             return Optional.of("查询关键字包含保留用字");
         }
