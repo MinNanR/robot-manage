@@ -163,11 +163,11 @@ public class HexaMessageHandler implements MessageHandler {
 
 
         if (paramString.length != hexaInfo.usageTotal.length) {
-            return Optional.of("请输入正确的计算参数");
+            return Optional.of(invalidTip());
         }
         for (String l : paramString) {
             if (!NumberUtil.isNumber(l)) {
-                return Optional.of("请输入正确的计算参数");
+                return Optional.of(invalidTip());
             }
         }
         int[] levels = Stream.of(paramString).mapToInt(Integer::parseInt).toArray();
@@ -177,7 +177,7 @@ public class HexaMessageHandler implements MessageHandler {
         for (int i = 0; i < levels.length; i++) {
             int level = levels[i];
             if (level < 0 || level > 30) {
-                return Optional.of("请输入正确的计算参数");
+                return Optional.of(invalidTip());
             }
             int[] usage = hexaInfo.usageMatrix[i];
             int totalSpent = Arrays.stream(ArrayUtil.sub(usage, 0, level + 1)).sum();
@@ -209,14 +209,14 @@ public class HexaMessageHandler implements MessageHandler {
         String partName = paramString[0].toUpperCase();
         Range range = detailMap.get(partName);
         if (range == null) {
-            return Optional.of("请输入正确的计算参数");
+            return Optional.of(invalidTip());
         }
         if (paramString.length - 1 != range.end - range.start) {
-            return Optional.of("请输入正确的计算参数");
+            return Optional.of(invalidTip());
         }
         for (int i = 1; i < paramString.length; i++) {
             if (!NumberUtil.isNumber(paramString[i])) {
-                return Optional.of("请输入正确的计算参数");
+                return Optional.of(invalidTip());
             }
         }
         int[] levels = Stream.of(paramString).skip(1).mapToInt(Integer::parseInt).toArray();
@@ -225,7 +225,7 @@ public class HexaMessageHandler implements MessageHandler {
         for (int i = 0; i < levels.length; i++) {
             int level = levels[i];
             if (level < 0 || level > 30) {
-                return Optional.of("请输入正确的计算参数");
+                return Optional.of(invalidTip());
             }
             int[] usage = hexaInfo.usageMatrix[i + range.start];
             int totalSpent = Arrays.stream(ArrayUtil.sub(usage, 0, level + 1)).sum();
@@ -236,5 +236,42 @@ public class HexaMessageHandler implements MessageHandler {
             replyMessage.add(line);
         }
         return Optional.of("\n" + String.join("\n", replyMessage));
+    }
+
+    /**
+     * 计算参数错误提示
+     * @return
+     */
+    public String invalidTip() {
+        if (VERSION_NEW_AGE.equals(gameVersion)) {
+            return """
+                    请输入正确的计算参数
+                    整体计算：hexa 起源 精通 V1 V2 V3 V4
+                    局部计算：
+                    起源：hexah 起源等级
+                    精通：hexa精通 精通等级
+                    V技能：hexav V1 V2 V3 V4
+                    """;
+        } else if (VERSION_DREAMER.equals(gameVersion)) {
+            return """
+                    请输入正确的计算参数
+                    整体计算：hexa 起源 精通1 精通2 V1 V2 V3 V4 通用
+                    局部计算：
+                    起源：hexah 起源等级
+                    精通：hexa精通 精通1等级 精通2等级
+                    V技能：hexav V1 V2 V3 V4
+                    通用：hexa通用 通用等级
+                    """;
+        } else {
+            return """
+                    请输入正确的计算参数
+                    整体计算：hexa 起源 精通1 精通2 V1 V2 V3 V4 通用
+                    局部计算：
+                    起源：hexah 起源等级
+                    精通：hexa精通 精通1等级 精通2等级
+                    V技能：hexav V1 V2 V3 V4
+                    通用：hexa通用 通用等级
+                    """;
+        }
     }
 }
