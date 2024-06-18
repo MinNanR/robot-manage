@@ -1,7 +1,6 @@
 package site.minnan.robotmanage.strategy.impl;
 
 
-import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.util.RandomUtil;
 import org.springframework.stereotype.Component;
 import site.minnan.robotmanage.entity.aggregate.Trigram;
@@ -9,7 +8,6 @@ import site.minnan.robotmanage.entity.dao.TrigramRepository;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
 import site.minnan.robotmanage.strategy.MessageHandler;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;

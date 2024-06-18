@@ -4,6 +4,7 @@ import cn.hutool.core.codec.Base64;
 import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.date.DateField;
 import cn.hutool.core.date.DateTime;
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.RandomUtil;
@@ -159,6 +160,13 @@ public class QueryMessageHandler implements MessageHandler {
             return Optional.of("查询失败");
         }
 
+        if ("2431".equals(userId) && "Distantidea".equalsIgnoreCase(queryTarget)) {
+            int random = RandomUtil.randomInt(0, 100);
+            if (random > 33) {
+                return Optional.of("查询失败");
+            }
+        }
+
         String today = DateTime.now().offset(DateField.HOUR, -8).toString("yyyMMdd");
         Supplier<String> getResult = () -> {
             String url = "%s/%s/%s.png".formatted(baseUrl, today, queryTarget.toLowerCase());
@@ -292,6 +300,10 @@ public class QueryMessageHandler implements MessageHandler {
                 expNeed = Long.parseLong(lvInfo.getExpToNextLevel());
                 dayNeed = dayNeed + (int) (expNeed / avg7);
                 reckonItem = new ReckonLevel(lv, now.offsetNew(DateField.DAY_OF_YEAR, dayNeed).toDateStr());
+                //大于10年的结束预测
+                if (dayNeed > 365 * 10) {
+                    break;
+                }
                 reckonList.add(reckonItem);
             }
             context.setVariable("levelPredicate", reckonList);

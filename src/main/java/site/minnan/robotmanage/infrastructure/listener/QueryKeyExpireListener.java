@@ -13,11 +13,11 @@ import site.minnan.robotmanage.strategy.impl.QueryMessageHandler;
 
 @Component
 @Slf4j
-public class RedisKeyExpireListener extends KeyExpirationEventMessageListener {
+public class QueryKeyExpireListener extends KeyExpirationEventMessageListener {
 
     private BotService botService;
 
-    public RedisKeyExpireListener(RedisMessageListenerContainer listenerContainer) {
+    public QueryKeyExpireListener(RedisMessageListenerContainer listenerContainer) {
         super(listenerContainer);
     }
 

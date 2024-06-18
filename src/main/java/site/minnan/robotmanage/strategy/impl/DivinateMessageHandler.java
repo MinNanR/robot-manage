@@ -75,6 +75,11 @@ public class DivinateMessageHandler implements MessageHandler {
     @Cacheable(value = "divination", keyGenerator = "divinateKeyGenerator")
     public Optional<String> handleMessage(MessageDTO dto) {
         DateTime now = DateTime.now();
+        int hour = now.hour(true);
+        if (hour < 8 || hour >= 23) {
+            return Optional.empty();
+        }
+
         String userId = dto.getSender().userId();
         String today = now.toString("yyyyMMdd");
         String redisKey = "divination::%s:%s".formatted(today, userId);
