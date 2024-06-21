@@ -58,6 +58,10 @@ public class DefaultMessageHandler implements MessageHandler {
 
     private static class AnswerContainer extends ArrayList<AnswerTime> {
         private AnswerContainer next;
+
+        private boolean hasAnswer(String s) {
+            return stream().anyMatch(e -> Objects.equals(s, e.content));
+        }
     }
 
     private static final Map<QuestionAndGroupPair, AnswerContainer> answerContainerMap = new ConcurrentHashMap<>();
@@ -87,53 +91,70 @@ public class DefaultMessageHandler implements MessageHandler {
         QuestionAndGroupPair pair = new QuestionAndGroupPair(message, groupId);
         AnswerContainer answerContainer;
         String redisKey = "question:%s::%s".formatted(pair.groupId, pair.question);
-        if (!answerContainerMap.containsKey(pair)) {
-            //所有词条id
-            List<Integer> questionIdList = questionList.stream().map(Question::getId).toList();
-            //查询这些词条在哪些群展示
-            List<QuestionGroup> questionGroupList = questionGroupRepository.findByQuestionIdIn(questionIdList);
-            //去除不在这个群展示的词条
-            questionGroupList.removeIf(questionGroup -> !questionGroup.getGroupId().equals(groupId));
-            //筛选出可以展示的词条id
-            List<Integer> showQuestionIdList = questionGroupList.stream().map(QuestionGroup::getQuestionId).toList();
-            //去除不在这个群展示的词条
-            questionList.removeIf(e -> !showQuestionIdList.contains(e.getId()));
 
-            List<Integer> questionIds = questionList.stream().map(e -> e.getId()).collect(Collectors.toList());
+        //所有词条id
+        List<Integer> questionIdList = questionList.stream().map(Question::getId).toList();
+        //查询这些词条在哪些群展示
+        List<QuestionGroup> questionGroupList = questionGroupRepository.findByQuestionIdIn(questionIdList);
+        //去除不在这个群展示的词条
+        questionGroupList.removeIf(questionGroup -> !questionGroup.getGroupId().equals(groupId));
+        //筛选出可以展示的词条id
+        List<Integer> showQuestionIdList = questionGroupList.stream().map(QuestionGroup::getQuestionId).toList();
+        //去除不在这个群展示的词条
+        questionList.removeIf(e -> !showQuestionIdList.contains(e.getId()));
 
-            List<Answer> answerList = answerRepository.findAnswerByQuestionIdInAndWhetherDeleteIs(questionIds, 0);
-            List<AnswerTime> answerTimeList = answerList.stream().map(e -> new AnswerTime(e.getContent())).collect(Collectors.toList());
-            answerContainer = new AnswerContainer();
-            answerContainer.addAll(answerTimeList);
-            answerContainerMap.put(pair, answerContainer);
-            redisUtil.valueSet(redisKey, "1", Duration.ofMinutes(10));
+        List<Integer> questionIds = questionList.stream().map(e -> e.getId()).collect(Collectors.toList());
+        List<Answer> answerList = answerRepository.findAnswerByQuestionIdInAndWhetherDeleteIs(questionIds, 0);
 
-        } else {
-            answerContainer = answerContainerMap.get(pair);
-        }
-        //无词条答案返回空
-        if (answerContainer.isEmpty()) {
+        if (answerList.isEmpty()) {
             return Optional.empty();
         }
-        //随机一个答案
-//        Answer randomAnswer = RandomUtil.randomEle(answers);
-        AnswerTime randomAnswer = RandomUtil.randomEle(answerContainer);
-        String result = randomAnswer.content;
-        randomAnswer.refer();
-        if (randomAnswer.time >= 3) {
-            if (answerContainer.next == null) {
-                answerContainer.next = new AnswerContainer();
+
+        String result;
+        if (answerList.size() > 1) {
+            //答案多于1个时需要使用循环策略
+            if (!answerContainerMap.containsKey(pair)) {
+                //容器中不存在记录，则创建新的容器
+                answerContainer = createAnswerContainer(pair,  answerList);
+            } else {
+                AnswerContainer temp = answerContainerMap.get(pair);
+                //比对缓存中的内容，不一致时重新生成
+                if (answerList.stream().anyMatch(e -> !temp.hasAnswer(e.getContent()))) {
+                    answerContainer = createAnswerContainer(pair, answerList);
+                } else {
+                     answerContainer = temp;
+                }
             }
-            AnswerTime newAnswerTime = new AnswerTime(randomAnswer.content);
-            answerContainer.add(newAnswerTime);
-            answerContainer.remove(randomAnswer);
-            if (answerContainer.isEmpty()) {
-                answerContainerMap.put(pair, answerContainer.next);
+            AnswerTime randomAnswer = RandomUtil.randomEle(answerContainer);
+            result = randomAnswer.content;
+            randomAnswer.refer();
+            if (randomAnswer.time >= 3) {
+                //答案回复大于三次，则将答案放到下一个队列中
+                if (answerContainer.next == null) {
+                    answerContainer.next = new AnswerContainer();
+                }
+                AnswerTime newAnswerTime = new AnswerTime(randomAnswer.content);
+                answerContainer.next.add(newAnswerTime);
+                answerContainer.remove(randomAnswer);
+                if (answerContainer.isEmpty()) {
+                    answerContainerMap.put(pair, answerContainer.next);
+                }
             }
+            //将回复次数缓存保存十分钟
             redisUtil.valueSet(redisKey, "1", Duration.ofMinutes(10));
+        } else {
+            result = answerList.get(0).getContent();
         }
-//        String result = randomAnswer.getContent();
         return Optional.of(result);
+    }
+
+    private AnswerContainer createAnswerContainer(QuestionAndGroupPair pair,List<Answer> answerList) {
+        AnswerContainer answerContainer;
+        List<AnswerTime> answerTimeList = answerList.stream().map(e -> new AnswerTime(e.getContent())).toList();
+        answerContainer = new AnswerContainer();
+        answerContainer.addAll(answerTimeList);
+        answerContainerMap.put(pair, answerContainer);
+        return answerContainer;
     }
 
     public void removeContainer(String expireKey) {
