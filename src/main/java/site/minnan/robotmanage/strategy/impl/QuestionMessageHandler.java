@@ -3,6 +3,7 @@ package site.minnan.robotmanage.strategy.impl;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.lang.Console;
+import cn.hutool.core.util.EscapeUtil;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
@@ -24,6 +25,8 @@ import site.minnan.robotmanage.infrastructure.exception.EntityNotExistException;
 import site.minnan.robotmanage.strategy.MessageHandler;
 
 import java.io.InputStream;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -195,6 +198,7 @@ public class QuestionMessageHandler implements MessageHandler {
             String name = nameResult.get(0);
             String ossKey = "rot/%s/%s.png".formatted(today, name);
             String newUrl = baseUrl + ossKey;
+            url = ReUtil.replaceAll(url, "%([^0-9A-Za-z])", "%25$1");
             HttpRequest request = HttpUtil.createGet(url);
             HttpResponse response = request.execute();
             InputStream stream = response.bodyStream();
