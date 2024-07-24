@@ -20,4 +20,7 @@ public class ModifyQuestionDTO extends OperateDTO {
 
     //选中的群号，上传所有
     private List<QuestionGroupCheck> checkList;
+
+    //群展示掩码
+    private Integer groupMask;
 }

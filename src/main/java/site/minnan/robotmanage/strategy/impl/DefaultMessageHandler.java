@@ -3,11 +3,11 @@ package site.minnan.robotmanage.strategy.impl;
 import cn.hutool.core.util.RandomUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.criteria.Predicate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 import site.minnan.robotmanage.entity.aggregate.Answer;
 import site.minnan.robotmanage.entity.aggregate.Question;
-import site.minnan.robotmanage.entity.aggregate.QuestionGroup;
 import site.minnan.robotmanage.entity.dao.AnswerRepository;
 import site.minnan.robotmanage.entity.dao.QuestionGroupRepository;
 import site.minnan.robotmanage.entity.dao.QuestionRepository;
@@ -31,6 +31,9 @@ public class DefaultMessageHandler implements MessageHandler {
     private final RedisUtil redisUtil;
 
     private final ObjectMapper objectMapper;
+
+    @Value("${groups}")
+    private String[] serviceGroups;
 
     public DefaultMessageHandler(QuestionRepository questionRepository, QuestionGroupRepository questionGroupRepository, AnswerRepository answerRepository, RedisUtil redisUtil) {
         this.questionRepository = questionRepository;
@@ -92,18 +95,24 @@ public class DefaultMessageHandler implements MessageHandler {
         AnswerContainer answerContainer;
         String redisKey = "question:%s::%s".formatted(pair.groupId, pair.question);
 
-        //所有词条id
-        List<Integer> questionIdList = questionList.stream().map(Question::getId).toList();
-        //查询这些词条在哪些群展示
-        List<QuestionGroup> questionGroupList = questionGroupRepository.findByQuestionIdIn(questionIdList);
-        //去除不在这个群展示的词条
-        questionGroupList.removeIf(questionGroup -> !questionGroup.getGroupId().equals(groupId));
-        //筛选出可以展示的词条id
-        List<Integer> showQuestionIdList = questionGroupList.stream().map(QuestionGroup::getQuestionId).toList();
-        //去除不在这个群展示的词条
-        questionList.removeIf(e -> !showQuestionIdList.contains(e.getId()));
+        //获取当前群编码
+        int groupNumber = 1;
+        for (String group : serviceGroups) {
+            if (Objects.equals(group, groupId)) {
+                break;
+            }
+            groupNumber = groupNumber << 1;
+        }
+        //Predicate内需要使用final变量，所以这里用一个新变量储存结果
+        int finalGroupNumber = groupNumber;
+        //groupMask是这个词条的群掩码，用于控制在哪个群展示
+        //groupMask与群编码相与为0表示不在这个群展示，非0表示可以在这个群展示
+        questionList.removeIf(e -> {
+            Integer groupMask = e.getGroupMask();
+            return (groupMask & finalGroupNumber) == 0;
+        });
 
-        List<Integer> questionIds = questionList.stream().map(e -> e.getId()).collect(Collectors.toList());
+        List<Integer> questionIds = questionList.stream().map(Question::getId).collect(Collectors.toList());
         List<Answer> answerList = answerRepository.findAnswerByQuestionIdInAndWhetherDeleteIs(questionIds, 0);
 
         if (answerList.isEmpty()) {

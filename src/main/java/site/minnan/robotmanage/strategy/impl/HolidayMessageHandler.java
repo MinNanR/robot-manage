@@ -15,6 +15,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import site.minnan.robotmanage.entity.dto.Holiday;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
@@ -253,11 +254,17 @@ public class HolidayMessageHandler implements MessageHandler {
     }
 
 
+    @Value("${spring.profiles.active}")
+    String profile;
+
     /**
      * 更新工作日映射表
      */
     @PostConstruct
     public void refreshWorkDay() {
+        if ("dev".equals(profile)) {
+            return;
+        }
         DateTime now = DateTime.now();
         HttpResponse response = HttpUtil.createGet("https://timor.tech/api/holiday/year/" + now.year())
                 .header("Accept", "application/json")

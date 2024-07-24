@@ -26,4 +26,7 @@ public class Question {
     private String updateTime;
 
     private String updater;
+
+    @Column(name = "group_mask")
+    private Integer groupMask;
 }

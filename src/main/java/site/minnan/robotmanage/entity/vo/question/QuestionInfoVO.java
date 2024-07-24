@@ -21,4 +21,6 @@ public class QuestionInfoVO {
 
     List<Answer> answerList;
 
+    Integer groupMask;
+
 }

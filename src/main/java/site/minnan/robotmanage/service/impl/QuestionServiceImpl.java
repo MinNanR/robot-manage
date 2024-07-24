@@ -4,7 +4,6 @@ import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.core.util.StrUtil;
-import jakarta.persistence.Transient;
 import jakarta.persistence.criteria.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import site.minnan.robotmanage.entity.aggregate.Answer;
 import site.minnan.robotmanage.entity.aggregate.Question;
-import site.minnan.robotmanage.entity.aggregate.QuestionGroup;
 import site.minnan.robotmanage.entity.dao.AnswerRepository;
 import site.minnan.robotmanage.entity.dao.QuestionGroupRepository;
 import site.minnan.robotmanage.entity.dao.QuestionRepository;
@@ -115,20 +113,20 @@ public class QuestionServiceImpl implements QuestionService {
                     e.setContent(replacement);
                 });
 
+        Optional<Question> questionOpt = questionRepository.findById(id);
+        Question question = questionOpt.get();
 
-        List<QuestionGroup> groups = questionGroupRepository.findByQuestionIdIs(id);
-        List<String> groupList = groups.stream().map(e -> e.getGroupId()).toList();
+        List<QuestionGroupCheck> checkList = new ArrayList<>();
+        Integer groupMask = question.getGroupMask();
+        for (int i = 0; i < serviceGroups.length; i++) {
+            QuestionGroupCheck check = new QuestionGroupCheck(serviceGroups[i]);
+            if ((groupMask & (1 << i)) != 0) {
+                check.setChecked(1);
+            }
+            checkList.add(check);
+        }
 
-        List<QuestionGroupCheck> checkList = Arrays.stream(serviceGroups)
-                .map(QuestionGroupCheck::new)
-                .peek(e -> {
-                    if (groupList.contains(e.getGroupId())) {
-                        e.setChecked(1);
-                    }
-                })
-                .toList();
-
-        return new QuestionInfoVO(checkList, answerList);
+        return new QuestionInfoVO(checkList, answerList, groupMask);
     }
 
     /**
@@ -144,16 +142,7 @@ public class QuestionServiceImpl implements QuestionService {
         Optional<Question> questionOpt = questionRepository.findById(questionId);
         Question question = questionOpt.orElseThrow(() -> new EntityNotExistException("词条不存在"));
 
-        List<QuestionGroupCheck> checkList = dto.getCheckList();
-        List<QuestionGroup> questionGroupList = checkList.stream()
-                .filter(e -> Objects.equals(e.getChecked(), 1))
-                .map(e -> e.getGroupId())
-                .map(e -> new QuestionGroup(questionId, e))
-                .toList();
-        //删除原有的绑定关系
-        questionGroupRepository.deleteByQuestionIdIs(questionId);
-        //重新生成绑定关系
-        questionGroupRepository.saveAll(questionGroupList);
+        question.setGroupMask(dto.getGroupMask());
         String now = DateTime.now().toString("yyyy-MM-dd HH:mm:ss");
         question.setUpdateTime(now);
         // TODO: 2024/01/26 设置更新人，后续增加权限后补充
@@ -223,6 +212,6 @@ public class QuestionServiceImpl implements QuestionService {
      */
     @Override
     public List<String> getServiceGroup() {
-        return Arrays.stream(serviceGroups).toList() ;
+        return Arrays.stream(serviceGroups).toList();
     }
 }

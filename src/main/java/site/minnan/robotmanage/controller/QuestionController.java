@@ -71,9 +71,9 @@ public class QuestionController {
      * @return
      */
     @ParamValidate(validates = {
-            @Validate(validator = NotNullValidator.class, fields = "id"),
-            @Validate(validator = ObjectCollectionNotNullDeepValidator.class, targetClass = QuestionGroupCheck.class, fields = "checkList",
-                    deepFields = {"groupId", "checked"})
+            @Validate(validator = NotNullValidator.class, fields = {"id", "groupMask"}),
+//            @Validate(validator = ObjectCollectionNotNullDeepValidator.class, targetClass = QuestionGroupCheck.class, fields = "checkList",
+//                    deepFields = {"groupId", "checked"})
     })
     @PostMapping("updateCheckGroup")
     public ResponseEntity<?> updateCheckGroup(@RequestBody ModifyQuestionDTO dto) {

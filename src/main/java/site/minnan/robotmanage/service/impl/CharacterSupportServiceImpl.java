@@ -323,7 +323,7 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         String queryUrl = queryMap.getQueryUrl();
         String fullQueryUrl = StrUtil.format(queryUrl, rank);
 
-        HttpResponse queryResponse = HttpUtil.createGet(fullQueryUrl).execute();
+        HttpResponse queryResponse = HttpUtil.createGet(fullQueryUrl).setProxy(proxy).execute();
         String responseJsonString = queryResponse.body();
         JSONObject responseJson = JSONUtil.parseObj(responseJsonString);
 //        JSONArray queryResultList = JSONUtil.parseArray(responseJsonString);
