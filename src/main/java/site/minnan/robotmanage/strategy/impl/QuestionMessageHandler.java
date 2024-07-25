@@ -7,12 +7,15 @@ import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
 import com.aliyun.oss.OSS;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import site.minnan.robotmanage.entity.aggregate.Answer;
+import site.minnan.robotmanage.entity.aggregate.Auth;
 import site.minnan.robotmanage.entity.aggregate.Question;
 import site.minnan.robotmanage.entity.dao.AnswerRepository;
+import site.minnan.robotmanage.entity.dao.AuthRepository;
 import site.minnan.robotmanage.entity.dao.QuestionGroupRepository;
 import site.minnan.robotmanage.entity.dao.QuestionRepository;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
@@ -51,6 +54,9 @@ public class QuestionMessageHandler implements MessageHandler {
     private QuestionGroupRepository questionGroupRepository;
 
     private BotSessionUtil botSessionUtil;
+
+    @Autowired
+    private AuthRepository authRepository;
 
 
     private static final String bucketName = "link-server";
@@ -198,7 +204,7 @@ public class QuestionMessageHandler implements MessageHandler {
 
         String queryContent = "%" + content + "%";
         List<Question> questions = questionRepository.findAllByContentLikeIgnoreCaseAndGroupId(queryContent, groupId);
-        questions.removeIf(e -> Objects.equals(e.getWhetherDelete(), 0));
+        questions.removeIf(e -> Objects.equals(e.getWhetherDelete(), 1));
 
         if (CollectionUtil.isEmpty(questions)) {
             return Optional.of("无匹配问题");
@@ -287,6 +293,11 @@ public class QuestionMessageHandler implements MessageHandler {
             botSessionUtil.updateSessionMessageHandler(groupId, userId, e -> iterateAnswer(e, answerList, 0, OPERATE_REFER));
             return Optional.of(reply);
         } else if ("2".equals(message)) {
+            Auth authObj = authRepository.findByUserIdAndGroupId(userId, groupId);
+            int auth = authObj == null ? 0 : authObj.getAuthNumber();
+            if ((auth & 0b10000) == 0) {
+                return Optional.of("当前用户无删除问题权限");
+            }
             //删除问题
             Optional<Question> questionOpt = questionRepository.findById(questionId);
             questionOpt.ifPresent(e -> {
@@ -357,6 +368,11 @@ public class QuestionMessageHandler implements MessageHandler {
             botSessionUtil.updateSessionMessageHandler(groupId, userId, dto -> iterateAnswer(dto, answerList, currentIndex, OPERATE_REFER));
             return Optional.of(reply);
         } else if ("2".equals(message)) {
+            Auth authObj = authRepository.findByUserIdAndGroupId(userId, groupId);
+            int auth = authObj == null ? 0 : authObj.getAuthNumber();
+            if ((auth & 0b10000) == 0) {
+                return Optional.of("当前用户无删除答案权限");
+            }
             Answer answer = answerList.get(indexCur);
             answer.setWhetherDelete(1);
             answer.setUpdater("QQ:" + userId);
