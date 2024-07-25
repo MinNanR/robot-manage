@@ -53,7 +53,7 @@ query:
   baseUrl: http://minnan.site/robotData/queryPic
   pythonPath: /home/minnan/robot-manage/create_pic.py
 
-groups: 931437070, 667082876, 653202241, 836656073
+groups: 931437070, 667082876, 653202241, 836656073, 348273823
 manager: 978312456
 sendMessageUrl: http://lynn.badeling.site/msg/sendLynnMsg
 proxyUrlPrefix: http://127.0.0.1:2017

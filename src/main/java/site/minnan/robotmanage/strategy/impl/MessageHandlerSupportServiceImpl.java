@@ -11,6 +11,7 @@ import site.minnan.robotmanage.entity.aggregate.HandlerStrategy;
 import site.minnan.robotmanage.entity.dao.AuthRepository;
 import site.minnan.robotmanage.entity.dao.StrategyRepository;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
+import site.minnan.robotmanage.infrastructure.utils.BotSessionUtil;
 import site.minnan.robotmanage.service.StatisticsService;
 import site.minnan.robotmanage.strategy.MessageHandler;
 import site.minnan.robotmanage.strategy.MessageHandlerSupportService;
@@ -34,14 +35,17 @@ public class MessageHandlerSupportServiceImpl implements MessageHandlerSupportSe
 
     private StatisticsService statisticsService;
 
+    private BotSessionUtil botSessionUtil;
+
     private ApplicationContext applicationContext;
 
     private static final String DEFAULT_HANDLER_NAME = "default";
 
-    public MessageHandlerSupportServiceImpl(StrategyRepository strategyRepository, AuthRepository authRepository, StatisticsService statisticsService) {
+    public MessageHandlerSupportServiceImpl(StrategyRepository strategyRepository, AuthRepository authRepository, StatisticsService statisticsService, BotSessionUtil botSessionUtil) {
         this.strategyRepository = strategyRepository;
         this.authRepository = authRepository;
         this.statisticsService = statisticsService;
+        this.botSessionUtil = botSessionUtil;
     }
 
     @Override
@@ -66,6 +70,12 @@ public class MessageHandlerSupportServiceImpl implements MessageHandlerSupportSe
         //用户被禁止使用
         if (((auth >> 6 & 1) ^ 1) == 0) {
             return e -> Optional.of("当前用户无使用权限");
+        }
+
+        //当对话存在时不从处理策略中查找处理器
+        Optional<MessageHandler> session = botSessionUtil.getSession(dto.getGroupId(), dto.getSender().userId());
+        if (session.isPresent()) {
+            return session.get();
         }
 
         for (HandlerStrategy strategy : strategyList) {
