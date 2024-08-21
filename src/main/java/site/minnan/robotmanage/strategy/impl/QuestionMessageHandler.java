@@ -309,7 +309,7 @@ public class QuestionMessageHandler implements MessageHandler {
             //删除问题后没有后续操作
             botSessionUtil.endSession(groupId, userId);
             return Optional.of("删除问题成功");
-        } else if (ReUtil.isMatch("3:(.*)", message)) {
+        } else if (ReUtil.isMatch("3[:：](.*)", message)) {
             //修改展示掩码
             String[] messageSplit = message.split("[:：]");
             if (messageSplit.length < 2) {
@@ -354,7 +354,7 @@ public class QuestionMessageHandler implements MessageHandler {
         String userId = messageDTO.getSender().userId();
 
         if ("1".equals(message)) {
-            if (indexCur == answerList.size() - 1) {
+            if (indexCur == answerList.size() - 1 && lastOperateFlag == OPERATE_REFER) {
                 return Optional.of("已是最后一个答案");
             }
             //上一个是查看操作，则游标下移，如果是删除操作，则游标不下移（删除时游标已经下移）

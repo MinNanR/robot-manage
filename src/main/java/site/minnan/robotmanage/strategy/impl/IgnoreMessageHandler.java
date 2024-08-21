@@ -83,7 +83,7 @@ public class IgnoreMessageHandler implements MessageHandler {
      * @param ign
      * @return
      */
-    private float bossDmg(float bossDef, float ign) {
+    protected float bossDmg(float bossDef, float ign) {
         return 1 - bossDef * (1 - ign);
     }
 
@@ -94,7 +94,7 @@ public class IgnoreMessageHandler implements MessageHandler {
      * @param add
      * @return
      */
-    private float newDef(float currentDef, float add) {
+    protected float newDef(float currentDef, float add) {
         if (add > 0) {
             return currentDef + add * (1 - currentDef);
         } else {
