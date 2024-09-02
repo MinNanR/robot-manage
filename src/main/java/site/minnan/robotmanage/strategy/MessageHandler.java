@@ -14,4 +14,7 @@ public interface MessageHandler {
      */
     Optional<String> handleMessage(MessageDTO dto);
 
+    default int getGroupMask() {
+        return 0xFFFF_FFFF;
+    }
 }

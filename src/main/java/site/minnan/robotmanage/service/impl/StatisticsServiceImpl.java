@@ -5,6 +5,7 @@ import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.json.JSONUtil;
 import jakarta.persistence.criteria.Predicate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import site.minnan.robotmanage.entity.aggregate.HandlerStrategy;
@@ -27,6 +28,8 @@ import java.util.stream.Stream;
 @Service
 public class StatisticsServiceImpl implements StatisticsService {
 
+    @Value("${spring.profiles.active}")
+    String profile;
 
     private StrategyStatisticsRepository strategyStatisticsRepository;
 
@@ -44,6 +47,10 @@ public class StatisticsServiceImpl implements StatisticsService {
      */
     @Override
     public void refer(HandlerStrategy strategy) {
+        if (!"prod".equals(profile)) {
+            //非生产环境不统计
+            return;
+        }
         DateTime now = DateTime.now();
         Specification<StrategyStatistics> specification = ((root, query, criteriaBuilder) -> {
             Predicate noteDatePredicate = criteriaBuilder.equal(root.get("noteDate"), now.toString());
@@ -157,21 +164,5 @@ public class StatisticsServiceImpl implements StatisticsService {
             });
             return new StatisticsQueryCommand(spec, DateUtil.yesterday(), DateUtil.yesterday());
         }
-    }
-
-    public static void main(String[] args) {
-        String content = "{groupid=348273823, height=935, url=/download?appid=1407&fileid=CgozODg5MDAwODQ5EhRzBcZtmkwaGcvzqltKEwGvgZoIZhi-jQUg_woopbqYnarQhANQgL2jAQ&rkey=CAQSKAB6JWENi5LMt0gEBEwU2dALUqmOBNqP8UYR_nHpXKUy3YTVvMMVhk0, width=945}";
-
-        String[] split = content.split(",");
-        String url = "";
-        for (String item : split) {
-            String[] itemSplit = item.strip().split("=");
-            String key = itemSplit[0];
-            if ("url".equals(key)) {
-                url = Stream.of(itemSplit).skip(1).collect(Collectors.joining("="));
-                break;
-            }
-        }
-        System.out.println(url);
     }
 }

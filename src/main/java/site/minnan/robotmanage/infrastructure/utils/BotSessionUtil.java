@@ -1,6 +1,7 @@
 package site.minnan.robotmanage.infrastructure.utils;
 
 
+import cn.hutool.core.lang.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -127,6 +128,7 @@ public class BotSessionUtil {
             MessageHandler messageHandler = botSessionMap.get(pair);
             String redisKey = "session:%s:%s".formatted(groupId, userId);
             redisUtil.setExpire(redisKey, 3L, TimeUnit.MINUTES);
+            log.info("消息命中会话，会话id = " + pair.hashCode());
             return Optional.of(messageHandler);
         } else {
             return Optional.empty();

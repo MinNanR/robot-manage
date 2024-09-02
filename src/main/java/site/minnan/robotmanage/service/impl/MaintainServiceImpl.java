@@ -1,6 +1,5 @@
 package site.minnan.robotmanage.service.impl;
 
-import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.date.DateField;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
@@ -17,12 +16,9 @@ import org.jsoup.nodes.Element;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Service;
-import org.springframework.web.servlet.tags.EditorAwareTag;
 import site.minnan.robotmanage.entity.aggregate.MaintainRecord;
 import site.minnan.robotmanage.entity.dao.MaintainRecordRepository;
-import site.minnan.robotmanage.infrastructure.config.ProxyConfig;
 import site.minnan.robotmanage.service.MaintainService;
-import site.minnan.robotmanage.service.ProxyService;
 
 import java.net.Proxy;
 import java.time.format.DateTimeFormatter;
@@ -193,6 +189,7 @@ public class MaintainServiceImpl implements MaintainService {
 
         JSONObject newestNote = newestNoteOpt.get();
         Integer newsId = newestNote.getInt("id");
+        String title = newestNote.getStr("name");
         //检查第一条公告是否有记录，已经记录过了就结束
         MaintainRecord recordInDb = maintainRecordRepository.findFirstByNewsId(newsId);
         if (recordInDb != null) {
@@ -263,26 +260,18 @@ public class MaintainServiceImpl implements MaintainService {
         endTime.offset(DateField.HOUR, timeDelta * -1 + 8);
         //生成维护记录
         MaintainRecord record = new MaintainRecord();
-        record.setTitle(dateStr + "维护公告");
+//        record.setTitle(dateStr + "维护公告");
+        record.setTitle(title == null ? dateStr + "维护公告" : title);
+
         record.setNewsId(newsId);
         record.setStartTime(startTime.toString("yyyy-MM-dd HH:mm"));
         record.setEndTime(endTime.toString("yyyy-MM-dd HH:mm"));
 
         log.info("检测到新维护公告，公告id {}，维护时间为{}-{}", record.getNewsId(), record.getStartTime(), record.getEndTime());
         //存入数据库
-        maintainRecordRepository.save(record);
+//        maintainRecordRepository.save(record);
 
         return Optional.of(record);
     }
 
-    public static void main(String[] args) {
-//        DateTimeFormatter pattern = DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy", Locale.ENGLISH);
-//        DateTime time = DateUtil.parse(dateStr, pattern);
-//        System.out.println(time);
-        Proxy proxy1 = new ProxyConfig().proxy();
-
-        MaintainService maintainService = new MaintainServiceImpl(proxy1, null);
-        Optional<MaintainRecord> maintainRecord = maintainService.detectMaintainV2();
-//        System.out.println(maintainRecord.map(MaintainRecord::toString).orElse("error"));
-    }
 }
