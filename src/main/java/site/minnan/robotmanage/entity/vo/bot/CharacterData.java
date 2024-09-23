@@ -68,6 +68,10 @@ public class CharacterData {
     //排名附近的人
     private List<CharacterData> nearRank;
 
+    private String source;
+
+    private String updateTime;
+
     /**
      * 无排名信息时，使用默认排名信息
      */

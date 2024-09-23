@@ -78,6 +78,9 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
     @Qualifier("proxy")
     private Proxy proxy;
 
+    @Value("${query_source:mapleranks}")
+    private String source;
+
     public CharacterSupportServiceImpl(QueryMapRepository queryMapRepository, NickRepository nickRepository, RedisUtil redisUtil) {
         this.queryMapRepository = queryMapRepository;
         this.nickRepository = nickRepository;
@@ -91,9 +94,107 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
      * @return
      */
     @Override
-    @Cacheable(value = "query", keyGenerator = "queryKeyGenerator")
     public CharacterData fetchCharacterInfo(String queryName) {
-        String queryUrl = BASE_QUERY_URL + queryName.strip();
+        if ("mapleranks".equals(source)) {
+            CharacterData characterData = fetchCharacterInfoMapleRanks(queryName);
+            characterData.setSource("https://mapleranks.com/");
+            return characterData;
+        } else if ("gg".equals(source)) {
+            CharacterData characterData = fetchCharacterInfoGg(queryName);
+            characterData.setSource("https://maplestory.gg/");
+            return characterData;
+        } else {
+            CharacterData characterData = fetchCharacterInfoMapleRanks(queryName);
+            characterData.setSource("https://mapleranks.com/");
+            return characterData;
+        }
+    }
+
+    /**
+     * 查询角色信息，从gg查询
+     *
+     * @param queryName
+     * @return
+     */
+    public CharacterData fetchCharacterInfoGg(String queryName) {
+        String baseQueryUrl = "https://api.maplestory.gg/v2/public/character/gms/";
+        String queryUrl = baseQueryUrl + queryName.strip();
+        HttpRequest queryRequest = HttpUtil.createGet(queryUrl).setProxy(proxy);
+        HttpResponse queryRes = queryRequest.execute();
+
+        String jsonString = queryRes.body();
+        JSONObject j = JSONUtil.parseObj(jsonString);
+        JSONObject data = j.getJSONObject("CharacterData");
+
+        CharacterData characterData = new CharacterData();
+
+        characterData.setCharacterImgUrl(data.getStr("CharacterImageURL"));
+        characterData.setName(data.getStr("Name"));
+        characterData.setLevel(data.getStr("Level"));
+        characterData.setServer(data.getStr("Server"));
+        characterData.setExpPercent(data.getStr("EXPPercent"));
+        characterData.setJob(data.getStr("Class"));
+
+        if (data.containsKey("GlobalRanking")) {
+            characterData.setServerClassRank(data.getStr("ServerClassRanking"));
+            characterData.setServerLevelRank(data.getStr("ServerRank"));
+            characterData.setGlobalClassRank(data.getStr("ClassRank"));
+            characterData.setGlobalLevelRank(data.getStr("GlobalRanking"));
+        } else {
+            characterData.setRankEmpty();
+        }
+
+        if (data.containsKey("AchievementRank")) {
+            characterData.setAchievementRank(data.getStr("AchievementRank"));
+            characterData.setAchievementPoints(data.getStr("AchievementPoints"));
+        }
+
+        if (data.containsKey("LegionRank")) {
+            characterData.setLegionLevel(data.getStr("LegionLevel"));
+            characterData.setLegionRank(data.getStr("LegionRank"));
+            characterData.setLegionPower(data.getStr("LegionPower"));
+            characterData.setLegionCoinsPerDay(data.getStr("LegionCoinsPerDay"));
+        }
+
+        characterData.setNearRank(Collections.emptyList());
+
+
+        JSONArray graphData = data.getJSONArray("GraphData");
+        List<JSONObject> expJsonList = graphData.stream().map(e -> (JSONObject) e).toList();
+        List<ExpData> expDataList = new ArrayList<>();
+        for (int i = 1; i < expJsonList.size(); i++) {
+            JSONObject obj = expJsonList.get(i);
+            String noteDate = DateUtil.parse(obj.getStr("DateLabel"), "yyyy-MM-dd").toString("M/dd");
+            String expDifference = expJsonList.get(i - 1).getStr("EXPDifference");
+            Integer level = obj.getInt("Level");
+            Long currentEXP = obj.getLong("CurrentEXP");
+            Long expToNextLevel = obj.getLong("EXPToNextLevel");
+            BigDecimal process = NumberUtil.div((Number) currentEXP, (long) currentEXP + expToNextLevel, 2, RoundingMode.HALF_UP);
+            double processDouble = process.doubleValue();
+            expDataList.add(new ExpData(noteDate, Long.parseLong(expDifference), level + processDouble));
+        }
+        characterData.setExpData(expDataList);
+
+        JSONObject lastExp = expJsonList.get(expJsonList.size() - 1);
+        Long updateTimeStamp = lastExp.getLong("ImportTime");
+
+        Instant instant = Instant.ofEpochSecond(updateTimeStamp);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.of("UTC"));
+        String updateTime = formatter.format(instant);
+        characterData.setUpdateTime(updateTime);
+
+        return characterData;
+    }
+
+    /**
+     * 查询角色信息,从mapleranks查询
+     *
+     * @param queryName 查询角色名称
+     * @return
+     */
+    public CharacterData fetchCharacterInfoMapleRanks(String queryName) {
+        String baseQueryUrl = "https://mapleranks.com/u/";
+        String queryUrl = baseQueryUrl + queryName.strip();
 
         HttpRequest queryRequest = HttpUtil.createGet(queryUrl).setProxy(proxy);
         HttpResponse queryRes = queryRequest.execute();
@@ -180,7 +281,7 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
                 characterData.setLegionPower(legionPowerEle.attr("value").replaceAll(",", ""));
                 characterData.setLegionCoinsPerDay(legionCoinsEle.attr("value").replace(",", ""));
             }
-        } catch (Exception ignored){
+        } catch (Exception ignored) {
 
         }
 
@@ -207,6 +308,14 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
                     .toList();
             characterData.setNearRank(nearRank);
         }
+
+        String updateTimeContent = getText.apply("/html/body/main/div/div/div[2]/div[2]/div[1]/div[4]");
+        if (updateTimeContent.isBlank()) {
+            updateTimeContent = getText.apply("/html/body/main/div/div/div[2]/div[2]/div[1]/div[2]");
+        }
+        String updateTime = updateTimeContent.replace("Last Updated:", "").strip();
+        characterData.setUpdateTime(updateTime);
+
         return characterData;
     }
 
@@ -483,7 +592,7 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
                 .map(e -> {
                     try {
                         return (BigDecimal) e;
-                    } catch (Exception ex){
+                    } catch (Exception ex) {
                         return BigDecimal.ZERO;
                     }
                 })

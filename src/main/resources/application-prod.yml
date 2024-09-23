@@ -20,6 +20,8 @@ spring:
       port: 6379
       database: 2
       password: minnan
+      repositories:
+        enabled: false
 
 
 server:

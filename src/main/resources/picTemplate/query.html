@@ -182,6 +182,10 @@
             <div style="line-height: 1.5" th:each="p:${levelPredicate}" th:text="${p.lv()} + ':' + ${p.dateLabel()}" ></div>
         </div>
     </div>
+    <div class="pure-u-6-24 head-box" style="text-align: center;margin-bottom: 10px;">Created By: CoderMinnan</div>
+    <div class="pure-u-6-24 head-box" style="text-align: center;margin-bottom: 10px;">Designed By: Citrvs</div>
+    <div class="pure-u-6-24 head-box" style="text-align: center;margin-bottom: 10px;" th:text="'data from: ' + ${c.source}"></div>
+    <div class="pure-u-6-24 head-box" style="text-align: center;margin-bottom: 10px;" th:text="'last updated : ' + ${c.updateTime}"></div>
 </div>
 </body>
 <script th:inline="javascript" type="text/javascript">
