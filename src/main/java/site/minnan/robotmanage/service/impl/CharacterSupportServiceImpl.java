@@ -5,7 +5,7 @@ import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.convert.NumberChineseFormatter;
 import cn.hutool.core.date.DateField;
 import cn.hutool.core.date.DateTime;
-import cn.hutool.core.lang.Console;
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.core.util.StrUtil;
@@ -17,20 +17,21 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.criteria.Predicate;
-import org.aspectj.util.FileUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.cache.annotation.Cacheable;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import site.minnan.robotmanage.entity.aggregate.Nick;
 import site.minnan.robotmanage.entity.aggregate.QueryMap;
+import site.minnan.robotmanage.entity.dao.LvExpRepository;
 import site.minnan.robotmanage.entity.dao.NickRepository;
 import site.minnan.robotmanage.entity.dao.QueryMapRepository;
 import site.minnan.robotmanage.entity.dto.GetNickListDTO;
@@ -44,11 +45,14 @@ import site.minnan.robotmanage.infrastructure.exception.EntityNotExistException;
 import site.minnan.robotmanage.infrastructure.utils.RedisUtil;
 import site.minnan.robotmanage.service.CharacterSupportService;
 
-import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.Proxy;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -61,10 +65,11 @@ import java.util.stream.Collectors;
  * @author Minnan on 2024/01/15
  */
 @Service
+@Slf4j
 public class CharacterSupportServiceImpl implements CharacterSupportService {
 
 
-    public static final String BASE_QUERY_URL = "https://mapleranks.com/u/";
+//    public static final String BASE_QUERY_URL = "https://mapleranks.com/u/";
 
     public static final String RANK_CACHE_KEY_TEMPLATE = "rank:%s:%s:%d";
 
@@ -309,10 +314,10 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
             characterData.setNearRank(nearRank);
         }
 
-        String updateTimeContent = getText.apply("/html/body/main/div/div/div[2]/div[2]/div[1]/div[4]");
-        if (updateTimeContent.isBlank()) {
-            updateTimeContent = getText.apply("/html/body/main/div/div/div[2]/div[2]/div[1]/div[2]");
-        }
+
+        Elements infoColumn = doc.selectXpath("/html/body/main/div/div/div[2]/div[2]/div[1]/div");
+        List<String> infoText = infoColumn.eachText();
+        String updateTimeContent = infoText.get(infoText.size() - 1);
         String updateTime = updateTimeContent.replace("Last Updated:", "").strip();
         characterData.setUpdateTime(updateTime);
 
@@ -599,10 +604,4 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
                 .collect(Collectors.toList());
     }
 
-    public static void main(String[] args) throws IOException {
-        String html = FileUtil.readAsString(new File("F:\\pdf\\CoderMinnan.html"));
-        List<BigDecimal> doubles = extraExpProcess(html);
-        Console.log(doubles.subList(doubles.size() - 14,doubles.size()));
-
-    }
 }
