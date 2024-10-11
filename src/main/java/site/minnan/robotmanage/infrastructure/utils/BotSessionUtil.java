@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
+import site.minnan.robotmanage.entity.vo.GroupAndUserPair;
 import site.minnan.robotmanage.strategy.MessageHandler;
 
 import java.time.Duration;
@@ -44,9 +45,6 @@ public class BotSessionUtil {
         }
     }
 
-    private record GroupAndUserPair(String groupId, String userId) {
-    }
-
     private static final ConcurrentHashMap<GroupAndUserPair, MessageHandler> botSessionMap = new ConcurrentHashMap<>();
 
     @Autowired
@@ -73,7 +71,7 @@ public class BotSessionUtil {
     public void startSession(String groupId, String userId, MessageHandler handler, Duration duration) {
         String redisKey = "session:%s:%s".formatted(groupId, userId);
         GroupAndUserPair pair = new GroupAndUserPair(groupId, userId);
-        SessionMessageHandlerProxy handlerProxy = new SessionMessageHandlerProxy(handler, p -> endSession(p.groupId, p.userId));
+        SessionMessageHandlerProxy handlerProxy = new SessionMessageHandlerProxy(handler, p -> endSession(p.groupId(), p.userId()));
         botSessionMap.put(pair, handlerProxy);
         redisUtil.valueSet(redisKey, "1", duration);
         log.info("开启对话，群号{}，用户{}", groupId, userId);
@@ -111,7 +109,7 @@ public class BotSessionUtil {
      */
     public void updateSessionMessageHandler(String groupId, String userId, MessageHandler handler) {
         GroupAndUserPair pair = new GroupAndUserPair(groupId, userId);
-        SessionMessageHandlerProxy handlerProxy = new SessionMessageHandlerProxy(handler, p -> endSession(p.groupId, p.userId));
+        SessionMessageHandlerProxy handlerProxy = new SessionMessageHandlerProxy(handler, p -> endSession(p.groupId(), p.userId()));
         botSessionMap.put(pair, handlerProxy);
     }
 

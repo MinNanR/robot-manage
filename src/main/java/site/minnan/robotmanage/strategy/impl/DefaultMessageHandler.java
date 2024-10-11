@@ -45,7 +45,7 @@ public class DefaultMessageHandler implements MessageHandler {
 
     private record QuestionAndGroupPair(String question, String groupId){}
 
-    private static class AnswerTime{
+    private static class AnswerTime {
         private String content;
         private int time;
 
@@ -124,14 +124,14 @@ public class DefaultMessageHandler implements MessageHandler {
             //答案多于1个时需要使用循环策略
             if (!answerContainerMap.containsKey(pair)) {
                 //容器中不存在记录，则创建新的容器
-                answerContainer = createAnswerContainer(pair,  answerList);
+                answerContainer = createAnswerContainer(pair, answerList);
             } else {
                 AnswerContainer temp = answerContainerMap.get(pair);
                 //比对缓存中的内容，不一致时重新生成
                 if (answerList.stream().anyMatch(e -> !temp.hasAnswer(e.getContent()))) {
                     answerContainer = createAnswerContainer(pair, answerList);
                 } else {
-                     answerContainer = temp;
+                    answerContainer = temp;
                 }
             }
             AnswerTime randomAnswer = RandomUtil.randomEle(answerContainer);
@@ -157,7 +157,7 @@ public class DefaultMessageHandler implements MessageHandler {
         return Optional.of(result);
     }
 
-    private AnswerContainer createAnswerContainer(QuestionAndGroupPair pair,List<Answer> answerList) {
+    private AnswerContainer createAnswerContainer(QuestionAndGroupPair pair, List<Answer> answerList) {
         AnswerContainer answerContainer;
         List<AnswerTime> answerTimeList = answerList.stream().map(e -> new AnswerTime(e.getContent())).toList();
         answerContainer = new AnswerContainer();
