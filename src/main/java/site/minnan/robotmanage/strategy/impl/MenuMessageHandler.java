@@ -62,6 +62,14 @@ public class MenuMessageHandler implements MessageHandler {
     @Override
     public Optional<String> handleMessage(MessageDTO dto) {
         String message = dto.getRawMessage();
+
+        if ("吃喝".equals(message)) {
+            String food = RandomUtil.randomEle(defaultMenu);
+            String drinking = RandomUtil.randomEle(drinkingMenu);
+            String reply = "今晚吃%s,喝%s".formatted(food, drinking);
+            return Optional.of(reply);
+        }
+
         message = message
                 .replace("吃点什么", "")
                 .replace("今晚吃什么", "")
