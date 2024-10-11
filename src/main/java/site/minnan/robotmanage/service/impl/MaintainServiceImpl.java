@@ -269,7 +269,7 @@ public class MaintainServiceImpl implements MaintainService {
 
         log.info("检测到新维护公告，公告id {}，维护时间为{}-{}", record.getNewsId(), record.getStartTime(), record.getEndTime());
         //存入数据库
-//        maintainRecordRepository.save(record);
+        maintainRecordRepository.save(record);
 
         return Optional.of(record);
     }
