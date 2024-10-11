@@ -35,6 +35,8 @@ public class ProxyServiceImpl implements ProxyService {
     @Value("${proxyUrlPrefix}")
     private String URL_PREFIX;
 
+    private static final String CONTENT_TYPE_JSON= "application/json";
+
     @Getter
     @Setter
     private class ProxyResponse {
@@ -50,7 +52,7 @@ public class ProxyServiceImpl implements ProxyService {
                 .put("password", "min2023*").build();
         //1.登陆 /api/login
         HttpRequest loginRequest = HttpUtil.createPost(URL_PREFIX + "/api/login")
-                .body(JSONUtil.toJsonStr(param), "application/json");
+                .body(JSONUtil.toJsonStr(param), CONTENT_TYPE_JSON);
         HttpResponse loginRes = loginRequest.execute();
         ProxyResponse loginResponse = JSONUtil.toBean(loginRes.body(), ProxyResponse.class);
         String token = loginResponse.data.getStr("token");
@@ -60,7 +62,7 @@ public class ProxyServiceImpl implements ProxyService {
         HttpResponse touchRes = touchRequest.execute();
         ProxyResponse touchResponse = JSONUtil.toBean(touchRes.body(), ProxyResponse.class);
         Boolean isRunning = touchResponse.data.getBool("running");
-        Console.log(JSONUtil.toJsonPrettyStr(touchResponse.data.getObj("touch")));
+//        Console.log(JSONUtil.toJsonPrettyStr(touchResponse.data.getObj("touch")));
         if (isRunning) {
             JSONArray connectedServer = touchResponse.data.getByPath("touch.connectedServer", JSONArray.class);
             Map<Integer, Integer> pingResult = ping(connectedServer, token);
@@ -83,6 +85,13 @@ public class ProxyServiceImpl implements ProxyService {
             HttpRequest shutdownRequest = HttpUtil.createRequest(Method.DELETE, URL_PREFIX + "/api/v2ray")
                             .auth(token);
             shutdownRequest.execute();
+            //取消选择
+            for (Object c : connectedServer) {
+                HttpRequest cancelRequest = HttpUtil.createRequest(Method.DELETE, URL_PREFIX + "/api/connection")
+                        .body(JSONUtil.toJsonStr(c), CONTENT_TYPE_JSON)
+                        .auth(token);
+                cancelRequest.execute();
+            }
             Thread.sleep(5000);
         }
         //3.订阅更新 /api/subscription
@@ -94,7 +103,7 @@ public class ProxyServiceImpl implements ProxyService {
         log.info("开始更新代理订阅,参数:{}", JSONUtil.toJsonStr(subscribeParam));
         HttpRequest subscriptionRequest = HttpUtil.createRequest(Method.PUT, URL_PREFIX + "/api/subscription")
                 .auth(token)
-                .body(JSONUtil.toJsonStr(subscribeParam), "application/json");
+                .body(JSONUtil.toJsonStr(subscribeParam), CONTENT_TYPE_JSON);
         HttpResponse subscriptionRes = subscriptionRequest.execute();
         ProxyResponse subscriptionResponse = JSONUtil.toBean(subscriptionRes.body(), ProxyResponse.class);
         JSONArray servers = subscriptionResponse.data.getByPath("touch.subscriptions[0].servers", JSONArray.class);
@@ -120,7 +129,7 @@ public class ProxyServiceImpl implements ProxyService {
         log.info("即将启动服务器，{}", serverToActive.toJSONString(0));
         HttpRequest connectionRequest = HttpUtil.createPost(URL_PREFIX + "/api/connection")
                 .auth(token)
-                .body(serverToActive.toJSONString(0), "application/json");
+                .body(serverToActive.toJSONString(0), CONTENT_TYPE_JSON);
         connectionRequest.execute();
         HttpRequest activeRequest = HttpUtil.createPost(URL_PREFIX + "/api/v2ray")
                 .auth(token);
@@ -148,6 +157,16 @@ public class ProxyServiceImpl implements ProxyService {
                     String latency = e.getStr("pingLatency");
                     return "TIMEOUT".equalsIgnoreCase(latency) ? -1 : Integer.parseInt(latency.replace("ms", ""));
                 }));
+    }
+
+    public static void main(String[] args) {
+        ProxyServiceImpl p = new ProxyServiceImpl();
+        p.URL_PREFIX = "http://minnan.site:2017";
+        try {
+            p.updateProxy();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }
