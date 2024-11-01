@@ -2,6 +2,7 @@ package site.minnan.robotmanage.strategy.impl;
 
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.ReUtil;
+import cn.hutool.core.util.StrUtil;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
@@ -9,6 +10,7 @@ import site.minnan.robotmanage.strategy.MessageHandler;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.security.InvalidParameterException;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -35,7 +37,7 @@ public class CalculateMessageHandler implements MessageHandler {
         operateMap.put("+", BigDecimal::add);
         operateMap.put("-", BigDecimal::subtract);
         operateMap.put("*", BigDecimal::multiply);
-        operateMap.put("/", (operand1, operand2) -> operand1.divide(operand2, 6, RoundingMode.HALF_UP));
+        operateMap.put("/", (operand1, operand2) -> operand1.divide(operand2, 30, RoundingMode.HALF_UP));
         operateMap.put("mod", (operand1, operand2) -> operand1.divideAndRemainder(operand2)[1]);
 
         operatorPriority = new HashMap<>();
@@ -45,6 +47,11 @@ public class CalculateMessageHandler implements MessageHandler {
         operatorPriority.put("/", 2);
         operatorPriority.put("mod", 2);
         operatorPriority.put("(", 3);
+    }
+
+
+    private boolean isInt(BigDecimal number) {
+        return number.scale() <= 0 || number.stripTrailingZeros().scale() <= 0;
     }
 
     /**
@@ -63,40 +70,76 @@ public class CalculateMessageHandler implements MessageHandler {
         formula = formula.toLowerCase().replace(" ", "").replaceAll("（", "(").replaceAll("）", ")");
         Function<Double, Optional<String>> specialFormula = d -> Optional.of(NumberUtil.decimalFormat("#.####", d));
 
-        if (formula.toLowerCase().startsWith("pow")) {
-            Pattern powPattern = Pattern.compile("pow\\((.*?),(.*?)\\)");
-            List<String> powParam = ReUtil.getAllGroups(powPattern, formula);
-            double base = Double.parseDouble(powParam.get(1));
-            double exponent = Double.parseDouble(powParam.get(2));
-            return specialFormula.apply(Math.pow(base, exponent));
-        } else if (formula.toLowerCase().startsWith("sqr") || formula.toLowerCase().startsWith("sqrt")) {
-            Pattern sqrPattern = Pattern.compile("sqrt?\\((.*?)\\)");
-            String sqrParam = ReUtil.getGroup1(sqrPattern, formula);
-            double sqrNumber = Double.parseDouble(sqrParam);
-            return specialFormula.apply(Math.sqrt(sqrNumber));
-        } else if (formula.toLowerCase().startsWith("bin")) {
-            Pattern binPattern = Pattern.compile("bin\\((.*?)\\)");
-            String binParam = ReUtil.getGroup1(binPattern, formula);
-            String result = Integer.toBinaryString(Integer.parseInt(binParam));
-            return Optional.of(result);
-        } else if (formula.toLowerCase().startsWith("hex")) {
-            Pattern hexPattern = Pattern.compile("hex\\((.*?)\\)");
-            String hexParam = ReUtil.getGroup1(hexPattern, formula);
-            String result = Integer.toHexString(Integer.parseInt(hexParam));
-            return Optional.of(result);
-        } else if (formula.toLowerCase().startsWith("oct\\((.*?)\\)")) {
-            Pattern octPattern = Pattern.compile("oct\\((.*?)\\)");
-            String octParam = ReUtil.getGroup1(octPattern, formula);
-            String result = Integer.toOctalString(Integer.parseInt(octParam));
-            return Optional.of(result);
-        } else if (formula.toLowerCase().startsWith("0b")) {
-            return Optional.of(Integer.valueOf(formula.substring(2), 2).toString());
-        } else if (formula.toLowerCase().startsWith("0o")) {
-            return Optional.of(Integer.valueOf(formula.substring(2), 8).toString());
-        } else if (formula.toLowerCase().startsWith("0x")) {
-            return Optional.of(Integer.valueOf(formula.substring(2), 16).toString());
-        }
+        try {
+            if (formula.toLowerCase().startsWith("pow")) {
+                Pattern powPattern = Pattern.compile("pow\\((.*?),(.*?)\\)");
+                List<String> powParam = ReUtil.getAllGroups(powPattern, formula);
+//            double base = Double.parseDouble(powParam.get(1));
+//            double exponent = Double.parseDouble(powParam.get(2));
+                BigDecimal base = doCalculate(powParam.get(1));
+                BigDecimal exponent = doCalculate(powParam.get(2));
+                return specialFormula.apply(Math.pow(base.doubleValue(), exponent.doubleValue()));
+            } else if (formula.toLowerCase().startsWith("sqr") || formula.toLowerCase().startsWith("sqrt")) {
+                Pattern sqrPattern = Pattern.compile("sqrt?\\((.*?)\\)");
+                String sqrParam = ReUtil.getGroup1(sqrPattern, formula);
+//            double sqrNumber = Double.parseDouble(sqrParam);
+                BigDecimal sqrNumber = doCalculate(sqrParam);
+                return specialFormula.apply(Math.sqrt(sqrNumber.doubleValue()));
+            } else if (formula.toLowerCase().startsWith("bin")) {
+                Pattern binPattern = Pattern.compile("bin\\((.*?)\\)");
+                String binParam = ReUtil.getGroup1(binPattern, formula);
+                BigDecimal number = doCalculate(binParam);
+                String result;
+                if (isInt(number)) {
+                    result = Integer.toBinaryString(number.intValue());
+                } else {
+                    long longBit = Double.doubleToLongBits(number.doubleValue());
+                    String binStr = StrUtil.fillBefore(Long.toBinaryString(longBit), '0', 64);
+                    String formattedBinStr = "%s_%s_%s".formatted(binStr.substring(0, 1), binStr.substring(1, 11), binStr.substring(11));
+                    result = formattedBinStr + "\n(" + Double.toHexString(number.doubleValue()) + ")";
+                }
+                return Optional.of(result);
+            } else if (formula.toLowerCase().startsWith("hex")) {
+                Pattern hexPattern = Pattern.compile("hex\\((.*?)\\)");
+                String hexParam = ReUtil.getGroup1(hexPattern, formula);
+                BigDecimal number = doCalculate(hexParam);
+                String result;
+                if (isInt(number)) {
+                    result = Integer.toBinaryString(number.intValue());
+                } else {
+                    long longBit = Double.doubleToLongBits(number.doubleValue());
+                    result = StrUtil.fillBefore(Long.toHexString(longBit), '0', 16) + "\n(" + Double.toHexString(number.doubleValue()) + ")";
+                }
+                return Optional.of(result);
+            } else if (formula.toLowerCase().startsWith("oct")) {
+                Pattern octPattern = Pattern.compile("oct\\((.*?)\\)");
+                String octParam = ReUtil.getGroup1(octPattern, formula);
+                BigDecimal number = doCalculate(octParam);
+                String result;
+                if (isInt(number)) {
+                    result = Integer.toBinaryString(number.intValue());
+                } else {
+                    long longBit = Double.doubleToLongBits(number.doubleValue());
+                    result = StrUtil.fillBefore(Long.toOctalString(longBit), '0', 22) + "\n(" + Double.toHexString(number.doubleValue()) + ")";
+                }
+                return Optional.of(result);
+            } else if (formula.toLowerCase().startsWith("0b")) {
+                return Optional.of(Integer.valueOf(formula.substring(2), 2).toString());
+            } else if (formula.toLowerCase().startsWith("0o")) {
+                return Optional.of(Integer.valueOf(formula.substring(2), 8).toString());
+            } else if (formula.toLowerCase().startsWith("0x")) {
+                return Optional.of(Integer.valueOf(formula.substring(2), 16).toString());
+            }
 
+            BigDecimal result = doCalculate(formula);
+            //判断是否以整数形式返回
+            return isInt(result) ? Optional.of(String.valueOf(result.intValue())) : Optional.of(result.setScale(6, RoundingMode.HALF_UP).toString());
+        } catch (InvalidParameterException e) {
+            return Optional.of(e.getMessage());
+        }
+    }
+
+    private BigDecimal doCalculate(String formula) {
         //运算符栈
         Stack<String> operatorStack = new Stack<>();
         //后缀表达式存储
@@ -147,7 +190,8 @@ public class CalculateMessageHandler implements MessageHandler {
                 //如果是右括号，则一直弹出运算符，直至遇到左括号，如果遇到左括号前运算符栈已空则表示输入的是错误表达式，结束解析
                 while (true) {
                     if (operatorStack.isEmpty()) {
-                        return Optional.of("请输入正确的表达式");
+//                        return Optional.of("请输入正确的表达式");
+                        throw new InvalidParameterException("请输入正确的表达式");
                     }
                     String operator = operatorStack.pop();
                     //遇到左括号则结束循环
@@ -184,7 +228,8 @@ public class CalculateMessageHandler implements MessageHandler {
         while (!operatorStack.isEmpty()) {
             String operator = operatorStack.pop();
             if ("(".equals(operator)) {
-                return Optional.of("请输入正确的表达式");
+//                return Optional.of("请输入正确的表达式");
+                throw new InvalidParameterException("请输入正确的表达式");
             }
             suffixExpression.add(new ExpressionItem(operator));
         }
@@ -210,17 +255,12 @@ public class CalculateMessageHandler implements MessageHandler {
 
         //表达式扫描结束后，操作数栈应该只剩一个元素，如果多于一个元素说明表达式错误
         if (operandStack.size() > 1) {
-            return Optional.of("请输入正确的表达式");
+//            return Optional.of("请输入正确的表达式");
+            throw new InvalidParameterException("请输入正确的表达式");
         }
         //获取栈顶元素即为运算结果
         BigDecimal result = operandStack.pop();
-        //判断是否以整数形式返回
-        if (result.scale() <= 0 || result.stripTrailingZeros().scale() <= 0) {
-            return Optional.of(String.valueOf(result.intValue()));
-        } else {
-            return Optional.of(result.toString());
-        }
-
+        return result;
     }
 
     /**
@@ -303,6 +343,12 @@ public class CalculateMessageHandler implements MessageHandler {
         NUMBER,
         //操作符
         OPERATOR
+    }
+
+    public static void main(String[] args) {
+        BigDecimal bigDecimal = new BigDecimal("-1.23");
+        long l = Double.doubleToLongBits(bigDecimal.doubleValue());
+        System.out.println(Long.toBinaryString(l));
     }
 
 }
