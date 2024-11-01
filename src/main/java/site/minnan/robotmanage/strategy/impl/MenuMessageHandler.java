@@ -13,6 +13,7 @@ import site.minnan.robotmanage.strategy.MessageHandler;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * 吃点什么消息处理
@@ -40,14 +41,14 @@ public class MenuMessageHandler implements MessageHandler {
                 "西北风", "馄饨", "火锅", "烧烤", "泡面", "速冻水饺", "日本料理", "涮羊肉", "味千拉面", "肯德基",
                 "面包", "扬州炒饭", "自助餐", "茶餐厅", "海底捞", "比萨", "麦当劳", "兰州拉面", "沙县小吃",
                 "烤鱼", "海鲜", "铁板烧", "韩国料理", "粥", "快餐", "东南亚菜", "甜点", "农家菜", "川菜",
-                "粤菜", "湘菜", "本帮菜", "竹笋烤肉", "阿呆炒饭"};
+                "粤菜", "湘菜", "本帮菜", "竹笋烤肉", "阿呆炒饭", "华莱士", "咖喱鸡", "冒菜"};
         drinkingMenu = new String[]{"可乐", "雪碧", "芬达", "茶π", "阿萨姆", "维他柠檬茶", "喜茶-水牛乳双拼抹茶", "喜茶-水牛乳双拼波波",
                 "喜茶-烤黑糖波波真乳茶", "喜茶-黑糖波波牛乳", "喜茶-烤黑糖波波真牛乳", "喜茶-小奶茉", "喜茶-芝芝多肉葡萄", "喜茶-芝芝芒芒",
                 "霸王茶姬-白雾红尘", "霸王茶姬-桂馥兰香", "霸王茶姬-伯牙绝弦", "霸王茶姬-万里木兰", "霸王茶姬-山野栀子", "霸王茶姬-花田乌龙",
                 "霸王茶姬-木兰辞", "霸王茶姬-折桂令", "霸王茶姬-云中绿", "霸王茶姬-醉红袍", "奈雪-金色山脉珍珠奶茶", "奈雪-森林观音奶茶",
                 "奈雪-芋泥芋圆奶茶", "奈雪-黑糖珍珠鲜奶茶", "奈雪-霸气芝士草莓", "奈雪-霸气葡萄", "奈雪-霸气杨枝甘露", "古茗-桂花酒酿小丸紫",
-                "古茗-云岭茉莉白", "古茗-百香芒芒冰柚茶", "古茗-生椰茶麻薯", "古茗-杨枝甘露", "古茗-布蕾脆脆奶芙", "古茗-超A芝士葡萄", "古茗-茉莉奶绿",
-                "茶百道-盐盐冰淇淋乌龙", "茶百道-双拼冰淇淋红茶", "茶百道-抹茶奶补丁", "茶百道-招牌芋圆奶茶", "茶百道-豆乳玉麒麟",
+                "古茗-云岭茉莉白", "古茗-百香芒芒冰柚茶", "古茗-生椰茶麻薯", "古茗-布蕾脆脆奶芙", "古茗-超A芝士葡萄", "古茗-茉莉奶绿",
+                "茶百道-盐盐冰淇淋乌龙", "茶百道-双拼冰淇淋红茶", "茶百道-抹茶奶布丁", "茶百道-招牌芋圆奶茶", "茶百道-豆乳玉麒麟",
                 "茶百道-黑糖珍珠奶茶", "茶百道-奥利奥奶茶", "茶百道-轻轻红茶", "蜜雪冰城-冰鲜柠檬水", "蜜雪冰城-珍珠奶茶", "蜜雪冰城-棒打鲜橙",
                 "蜜雪冰城-满杯百香果", "蜜雪冰城-芋圆葡萄", "蜜雪冰城-草莓啵啵", "蜜雪冰城-桑葚梅梅", "蜜雪冰城-布丁奶茶", "coco-珍珠奶茶",
                 "coco-茉香奶绿", "coco-奶茶吨吨桶", "coco-奶茶三兄弟", "coco-星空葡萄", "coco-鲜芋牛奶"};
@@ -109,6 +110,8 @@ public class MenuMessageHandler implements MessageHandler {
             launcher.set("wind_count_down", RandomUtil.randomInt(10, 20));
         }
 
+        ReentrantLock reentrantLock = new ReentrantLock();
+        reentrantLock.tryLock();
         redisUtil.valueSet(LAUNCHER_KEY, JSONUtil.toJsonStr(launcher), Duration.ofMinutes(10));
 
         String item = RandomUtil.randomEle(menu);
