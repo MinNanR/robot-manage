@@ -28,6 +28,8 @@ public class AuthMessageHandler implements MessageHandler {
         this.authRepository = authRepository;
     }
 
+    private static final int AUTH_NUMBER_LENGTH = 10;
+
     /**
      * 处理消息
      *
@@ -118,13 +120,16 @@ public class AuthMessageHandler implements MessageHandler {
             //修改权限码为负数时，表示移除某个位上的权限，取绝对值的反码，再与原本的权限码相与得到新权限码
             //这里转成字符串再做比特填充后取反码，用字符串可以自己指定比特位数，用Integer类转的话只能做32比特转换
             //后续增加权限类型只需要修改最后一个填充长度就可以
-            String newAuthBin = StrUtil.fillBefore(Integer.toBinaryString(Math.abs(modifyNumber)), '0', 10);
-            //取反操作
-            String newAuthRevBin = newAuthBin
-                    .replace("0", "2")
-                    .replace("1", "0")
-                    .replace("2", "1");
-            int newAuthNumber = Integer.parseInt(newAuthRevBin, 2);
+//            String newAuthBin = StrUtil.fillBefore(Integer.toBinaryString(Math.abs(modifyNumber)), '0', 10);
+//            //取反操作
+//            String newAuthRevBin = newAuthBin
+//                    .replace("0", "2")
+//                    .replace("1", "0")
+//                    .replace("2", "1");
+//            int newAuthNumber = Integer.parseInt(newAuthRevBin, 2);
+            modifyNumber = Math.abs(modifyNumber);
+            //按位取反后，取低x位的比特位组成修改权限码，x为权限码位数
+            int newAuthNumber = (~modifyNumber) & ((1 << AUTH_NUMBER_LENGTH) - 1);
             authNumber = authNumber & newAuthNumber;
         }
         auth.setAuthNumber(authNumber);
