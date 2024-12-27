@@ -34,7 +34,8 @@ public class ExecuteDetectMaintainMessageHandler implements MessageHandler {
     public Optional<String> handleMessage(MessageDTO dto) {
         try {
             Optional<MaintainRecord> maintainRecordOpt = maintainService.detectMaintainV2();
-            String reply = maintainRecordOpt.map(e -> "检测到新维护公告，公告id %s，维护时间为%s-%s".formatted(e.getNewsId(), e.getStartTime(), e.getEndTime()))
+            String reply = maintainRecordOpt
+                    .map(e -> "检测到新维护公告，公告id %s，维护时间为%s-%s".formatted(e.getNewsId(), e.getStartTime(), e.getEndTime()))
                     .orElse("没有检测到新的维护公告");
             return Optional.of(reply);
         } catch (Exception e) {

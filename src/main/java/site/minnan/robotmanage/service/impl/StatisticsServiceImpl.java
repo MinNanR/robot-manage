@@ -47,20 +47,20 @@ public class StatisticsServiceImpl implements StatisticsService {
      */
     @Override
     public void refer(HandlerStrategy strategy) {
-        if (!"prod".equals(profile)) {
-            //非生产环境不统计
-            return;
-        }
-        DateTime now = DateTime.now();
-        Specification<StrategyStatistics> specification = ((root, query, criteriaBuilder) -> {
-            Predicate noteDatePredicate = criteriaBuilder.equal(root.get("noteDate"), now.toString());
-            Predicate idPredicate = criteriaBuilder.equal(root.get("strategyId"), strategy.getId());
-            return query.where(noteDatePredicate, idPredicate).getRestriction();
-        });
-        Optional<StrategyStatistics> statisticsOpt = strategyStatisticsRepository.findOne(specification);
-        StrategyStatistics statistics = statisticsOpt.orElseGet(() -> new StrategyStatistics(strategy));
-        statistics.refer();
-        strategyStatisticsRepository.save(statistics);
+//        if (!"prod".equals(profile)) {
+//            //非生产环境不统计
+//            return;
+//        }
+//        DateTime now = DateTime.now();
+//        Specification<StrategyStatistics> specification = ((root, query, criteriaBuilder) -> {
+//            Predicate noteDatePredicate = criteriaBuilder.equal(root.get("noteDate"), now.toString());
+//            Predicate idPredicate = criteriaBuilder.equal(root.get("strategyId"), strategy.getId());
+//            return query.where(noteDatePredicate, idPredicate).getRestriction();
+//        });
+//        Optional<StrategyStatistics> statisticsOpt = strategyStatisticsRepository.findOne(specification);
+//        StrategyStatistics statistics = statisticsOpt.orElseGet(() -> new StrategyStatistics(strategy));
+//        statistics.refer();
+//        strategyStatisticsRepository.save(statistics);
     }
 
     /**

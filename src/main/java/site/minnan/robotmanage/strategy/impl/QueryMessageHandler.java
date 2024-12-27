@@ -160,13 +160,6 @@ public class QueryMessageHandler implements MessageHandler {
             return Optional.of("查询失败");
         }
 
-        if ("2431".equals(userId) && "Distantidea".equalsIgnoreCase(queryTarget)) {
-            int random = RandomUtil.randomInt(0, 100);
-            if (random > 33) {
-                return Optional.of("查询失败");
-            }
-        }
-
         String today = DateTime.now().offset(DateField.HOUR, -8).toString("yyyMMdd");
         Supplier<String> getResult = () -> {
             String url = "%s/%s/%s.png".formatted(baseUrl, today, queryTarget.toLowerCase());
