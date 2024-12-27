@@ -11,6 +11,7 @@ import site.minnan.robotmanage.entity.aggregate.HandlerStrategy;
 import site.minnan.robotmanage.entity.dao.AuthRepository;
 import site.minnan.robotmanage.entity.dao.StrategyRepository;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
+import site.minnan.robotmanage.entity.enumeration.AuthEnum;
 import site.minnan.robotmanage.infrastructure.utils.BotSessionUtil;
 import site.minnan.robotmanage.service.StatisticsService;
 import site.minnan.robotmanage.strategy.MessageHandler;
@@ -60,7 +61,6 @@ public class MessageHandlerSupportServiceImpl implements MessageHandlerSupportSe
      */
     @Override
     public MessageHandler judgeMessageHandler(MessageDTO dto) {
-        List<HandlerStrategy> strategyList = strategyRepository.getAllByEnabledIsOrderByOrdinal(1);
         String rawMessage = dto.getRawMessage().toLowerCase();
         String messageId = dto.getMessageId();
         String groupId = dto.getGroupId();
@@ -68,7 +68,8 @@ public class MessageHandlerSupportServiceImpl implements MessageHandlerSupportSe
         Auth authObj = authRepository.findByUserIdAndGroupId(userId, groupId);
         int auth = authObj == null ? 0 : authObj.getAuthNumber();
         //用户被禁止使用
-        if (((auth >> 6 & 1) ^ 1) == 0) {
+//        if (((auth >> 6 & 1) ^ 1) == 0) {
+        if (!AuthEnum.AVAILABLE.isAuthorized(auth)) {
             return e -> Optional.of("当前用户无使用权限");
         }
 
@@ -77,6 +78,8 @@ public class MessageHandlerSupportServiceImpl implements MessageHandlerSupportSe
         if (session.isPresent()) {
             return session.get();
         }
+
+        List<HandlerStrategy> strategyList = strategyRepository.getAllByEnabledIsOrderByOrdinal(1);
 
         for (HandlerStrategy strategy : strategyList) {
             Integer expressionType = strategy.getExpressionType();

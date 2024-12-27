@@ -19,6 +19,8 @@ import site.minnan.robotmanage.entity.dao.AuthRepository;
 import site.minnan.robotmanage.entity.dao.QuestionGroupRepository;
 import site.minnan.robotmanage.entity.dao.QuestionRepository;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
+import site.minnan.robotmanage.entity.enumeration.AuthEnum;
+import site.minnan.robotmanage.entity.enumeration.Authentic;
 import site.minnan.robotmanage.infrastructure.exception.EntityNotExistException;
 import site.minnan.robotmanage.infrastructure.utils.BotSessionUtil;
 import site.minnan.robotmanage.strategy.MessageHandler;
@@ -295,7 +297,8 @@ public class QuestionMessageHandler implements MessageHandler {
         } else if ("2".equals(message)) {
             Auth authObj = authRepository.findByUserIdAndGroupId(userId, groupId);
             int auth = authObj == null ? 0 : authObj.getAuthNumber();
-            if ((auth & 0b10000) == 0) {
+//            if ((auth & 0b10000) == 0) {
+            if (AuthEnum.DELETE_QUESTION.isAuthorized(auth)) {
                 return Optional.of("当前用户无删除问题权限");
             }
             //删除问题
@@ -370,7 +373,8 @@ public class QuestionMessageHandler implements MessageHandler {
         } else if ("2".equals(message)) {
             Auth authObj = authRepository.findByUserIdAndGroupId(userId, groupId);
             int auth = authObj == null ? 0 : authObj.getAuthNumber();
-            if ((auth & 0b10000) == 0) {
+//            if ((auth & 0b10000) == 0) {
+            if (!AuthEnum.DELETE_ANSWER.isAuthorized(auth)) {
                 return Optional.of("当前用户无删除答案权限");
             }
             Answer answer = answerList.get(indexCur);
