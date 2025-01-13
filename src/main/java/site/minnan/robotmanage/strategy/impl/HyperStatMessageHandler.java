@@ -87,13 +87,13 @@ public class HyperStatMessageHandler implements MessageHandler {
 
         if (!isArcher) {
             String reply = """
-                    请依次当前角色面板上下列数据参数
+                    请依次输入当前角色面板上下列数据参数
                     BD DMG 无视 爆伤 主属性 副属性 攻击力基础
                     """;
             return Optional.of(reply);
         } else {
             String reply = """
-                    请依次当前角色面板上下列数据参数
+                    请依次输入当前角色面板上下列数据参数
                     BD DMG 无视 爆伤 主属性 副属性 攻击力基础 暴击率
                     """;
             return Optional.of(reply);
@@ -256,7 +256,7 @@ public class HyperStatMessageHandler implements MessageHandler {
             int level4 = (code >> 12) & 0xF;
             int level5 = (code >> 16) & 0xF;
             int level6 = (code >> 20) & 0xF;
-            int level7 = isArcher ? (code >> 24) & 0xF : 0;
+            int level7 = (code >> 24) & 0xF;
             if (level1 < 10 || level2 < 10 || level3 < 10 || level4 < 10) {
                 continue;
             }

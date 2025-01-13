@@ -31,7 +31,6 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import site.minnan.robotmanage.entity.aggregate.Nick;
 import site.minnan.robotmanage.entity.aggregate.QueryMap;
-import site.minnan.robotmanage.entity.dao.LvExpRepository;
 import site.minnan.robotmanage.entity.dao.NickRepository;
 import site.minnan.robotmanage.entity.dao.QueryMapRepository;
 import site.minnan.robotmanage.entity.dto.GetNickListDTO;
@@ -45,7 +44,6 @@ import site.minnan.robotmanage.infrastructure.exception.EntityNotExistException;
 import site.minnan.robotmanage.infrastructure.utils.RedisUtil;
 import site.minnan.robotmanage.service.CharacterSupportService;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.Proxy;
@@ -100,8 +98,19 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
      */
     @Override
     public CharacterData fetchCharacterInfo(String queryName) {
+        return fetchCharacterInfo(queryName, "u");
+    }
+
+    /**
+     * 查询角色信息
+     *
+     * @param queryName 查询角色名称
+     * @return
+     */
+    @Override
+    public CharacterData fetchCharacterInfo(String queryName, String server) {
         if ("mapleranks".equals(source)) {
-            CharacterData characterData = fetchCharacterInfoMapleRanks(queryName);
+            CharacterData characterData = fetchCharacterInfoMapleRanks(queryName, server);
             characterData.setSource("https://mapleranks.com/");
             return characterData;
         } else if ("gg".equals(source)) {
@@ -109,7 +118,7 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
             characterData.setSource("https://maplestory.gg/");
             return characterData;
         } else {
-            CharacterData characterData = fetchCharacterInfoMapleRanks(queryName);
+            CharacterData characterData = fetchCharacterInfoMapleRanks(queryName, server);
             characterData.setSource("https://mapleranks.com/");
             return characterData;
         }
@@ -195,10 +204,16 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
      * 查询角色信息,从mapleranks查询
      *
      * @param queryName 查询角色名称
+     * @param server 服务器信息
      * @return
      */
-    public CharacterData fetchCharacterInfoMapleRanks(String queryName) {
-        String baseQueryUrl = "https://mapleranks.com/u/";
+    public CharacterData fetchCharacterInfoMapleRanks(String queryName, String server) {
+        String baseQueryUrl;
+        if (server.equals("u")) {
+            baseQueryUrl = "https://mapleranks.com/u/";
+        } else {
+            baseQueryUrl = "https://mapleranks.com/u/eu/";
+        }
         String queryUrl = baseQueryUrl + queryName.strip();
 
         HttpRequest queryRequest = HttpUtil.createGet(queryUrl).setProxy(proxy);
@@ -225,6 +240,11 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
             Elements elements = doc.selectXpath(xpath);
             return elements.isEmpty() ? "" : elements.get(0).text().strip();
         };
+
+        String notFoundFlag = getText.apply("/html/body/main/div/div/div[2]/h2");
+        if ("Not Found".equals(notFoundFlag)) {
+            throw new EntityNotExistException("角色不存在");
+        }
 
         //解析名称，角色图片，等级信息，职业信息
         String name = getText.apply("/html/body/main/div/div/div[2]/div[2]/div[1]/div[1]/div/h3");

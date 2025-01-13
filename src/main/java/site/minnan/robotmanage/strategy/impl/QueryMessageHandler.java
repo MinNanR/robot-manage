@@ -168,12 +168,26 @@ public class QueryMessageHandler implements MessageHandler {
 
         String pngPath = "%s/%s/%s.png".formatted(folder, today, queryTarget.toLowerCase());
         if (FileUtil.exist(pngPath)) {
-            return Optional.of(getResult.get());
+            //经验异常的角色可以尝试重新查询，每天可以重试5次，
+            //经验异常：昨日经验为0
+            String exceptExpKey = exceptExpKey(today, queryTarget.toLowerCase());
+            if (!redisUtil.hasKey(exceptExpKey)) {
+                return Optional.of(getResult.get());
+            } else {
+                int countDown = (int) redisUtil.getValue(exceptExpKey);
+                countDown -= 1;
+                if (countDown == 0) {
+                    redisUtil.delete(exceptExpKey);
+                } else {
+                    redisUtil.valueSet(exceptExpKey, countDown);
+                }
+            }
         }
 
         CharacterData c;
         try {
-            c = characterSupportService.fetchCharacterInfo(queryTarget);
+            String server = (String) dto.getPayload().getOrDefault("server", "u");
+            c = characterSupportService.fetchCharacterInfo(queryTarget, server);
         } catch (Exception e) {
             log.error("查询角色信息失败，查询目标为" + queryTarget, e);
             return Optional.of("查询失败");
@@ -199,6 +213,9 @@ public class QueryMessageHandler implements MessageHandler {
      * @param characterData 角色信息
      */
     private void createPic(CharacterData characterData) {
+        DateTime now = DateTime.now();
+        String today = now.offset(DateField.HOUR, -8).toString("yyyyMMdd");
+
         ClassLoaderTemplateResolver templateResolver = new ClassLoaderTemplateResolver();
         templateResolver.setSuffix(".html");
         templateResolver.setTemplateMode(TemplateMode.HTML);
@@ -236,6 +253,13 @@ public class QueryMessageHandler implements MessageHandler {
                 .set("process", processList);
 
         List<ExpData> reverseExpData = ListUtil.reverseNew(expData);
+        //经验异常的角色可以尝试重新查询，每天可以重试5次，
+        //经验异常：昨日经验为0
+        if (reverseExpData.get(0).expDifference() == 0) {
+            redisUtil.setnx(exceptExpKey(today, characterData.getName().toLowerCase()), 5, Duration.ofDays(1));
+        } else {
+            redisUtil.delete(exceptExpKey(today, characterData.getName().toLowerCase()));
+        }
 
         double sum7 = reverseExpData.stream()
                 .limit(7)
@@ -262,7 +286,6 @@ public class QueryMessageHandler implements MessageHandler {
         PageRequest page = PageRequest.of(0, 10);
         int lv = Integer.parseInt(characterData.getLevel());
         List<LvExp> stageList = lvExpRepository.findByLvGreaterThanEqual(lv, page);
-        DateTime now = DateTime.now();
         if (stageList.isEmpty() || sum7 == 0) {
             context.setVariable("levelPredicate", Collections.emptyList());
         } else {
@@ -306,7 +329,7 @@ public class QueryMessageHandler implements MessageHandler {
         //使用模板引擎，生成html代码
         String html = templateEngine.process("picTemplate/query", context);
 
-        String today = now.offset(DateField.HOUR, -8).toString("yyyyMMdd");
+
         String folderPath = "%s/%s".formatted(folder, today);
         File folderFile = new File(folderPath);
         if (!folderFile.exists()) {
@@ -394,6 +417,10 @@ public class QueryMessageHandler implements MessageHandler {
                 }
             });
         }
+    }
+
+    private String exceptExpKey(String today, String characterName) {
+        return "EXCEPT_EXP:%s:%s".formatted(today, characterName);
     }
 
 }

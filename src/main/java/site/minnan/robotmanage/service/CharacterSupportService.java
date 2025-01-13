@@ -25,6 +25,14 @@ public interface CharacterSupportService {
     CharacterData fetchCharacterInfo(String queryName);
 
     /**
+     * 查询角色信息
+     * @param queryName 查询角色名称
+     * @param server 服务器
+     * @return
+     */
+    CharacterData fetchCharacterInfo(String queryName, String server);
+
+    /**
      * 解析查询目标
      *
      * @param dto
