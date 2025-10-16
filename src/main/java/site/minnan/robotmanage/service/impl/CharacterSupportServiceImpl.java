@@ -6,6 +6,7 @@ import cn.hutool.core.convert.NumberChineseFormatter;
 import cn.hutool.core.date.DateField;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.date.TimeInterval;
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.core.util.StrUtil;
@@ -67,7 +68,7 @@ import java.util.stream.Collectors;
 public class CharacterSupportServiceImpl implements CharacterSupportService {
 
 
-//    public static final String BASE_QUERY_URL = "https://mapleranks.com/u/";
+    //    public static final String BASE_QUERY_URL = "https://mapleranks.com/u/";
 
     public static final String RANK_CACHE_KEY_TEMPLATE = "rank:%s:%s:%d";
 
@@ -114,7 +115,7 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
             characterData.setSource("https://mapleranks.com/");
             return characterData;
         } else if ("gg".equals(source)) {
-            CharacterData characterData = fetchCharacterInfoGg(queryName);
+            CharacterData characterData = fetchCharacterInfoGg(queryName, server);
             characterData.setSource("https://maplestory.gg/");
             return characterData;
         } else {
@@ -130,8 +131,13 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
      * @param queryName
      * @return
      */
-    public CharacterData fetchCharacterInfoGg(String queryName) {
-        String baseQueryUrl = "https://api.maplestory.gg/v2/public/character/gms/";
+    public CharacterData fetchCharacterInfoGg(String queryName,String server) {
+        String baseQueryUrl;
+        if ("u".equals(server)) {
+            baseQueryUrl = "https://api.maplestory.gg/v2/public/character/gms/";
+        } else {
+            baseQueryUrl = "https://api.maplestory.gg/v2/public/character/ems/";
+        }
         String queryUrl = baseQueryUrl + queryName.strip();
         HttpRequest queryRequest = HttpUtil.createGet(queryUrl).setProxy(proxy);
         HttpResponse queryRes = queryRequest.execute();
@@ -176,6 +182,19 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         JSONArray graphData = data.getJSONArray("GraphData");
         List<JSONObject> expJsonList = graphData.stream().map(e -> (JSONObject) e).toList();
         List<ExpData> expDataList = new ArrayList<>();
+        if (expJsonList.size() < 15) {
+            int lackDay = 15 - expJsonList.size();
+            JSONObject obj = expJsonList.get(0);
+            DateTime firstDate = DateTime.of(obj.getStr("DateLabel"), "yyyy-MM-dd");
+            Integer level = obj.getInt("Level");
+            Long currentEXP = obj.getLong("CurrentEXP");
+            Long expToNextLevel = obj.getLong("EXPToNextLevel");
+            BigDecimal process = NumberUtil.div((Number) currentEXP, (long) currentEXP + expToNextLevel, 2, RoundingMode.HALF_UP);
+            for (int i = 0; i < lackDay; i++) {
+                DateTime date = firstDate.offsetNew(DateField.DAY_OF_YEAR, i - lackDay);
+                expDataList.add(new ExpData(date.toString("M/dd"), 0L, level + process.doubleValue()));
+            }
+        }
         for (int i = 1; i < expJsonList.size(); i++) {
             JSONObject obj = expJsonList.get(i);
             String noteDate = DateUtil.parse(obj.getStr("DateLabel"), "yyyy-MM-dd").toString("M/dd");
@@ -187,6 +206,7 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
             double processDouble = process.doubleValue();
             expDataList.add(new ExpData(noteDate, Long.parseLong(expDifference), level + processDouble));
         }
+
         characterData.setExpData(expDataList);
 
         JSONObject lastExp = expJsonList.get(expJsonList.size() - 1);
@@ -228,7 +248,10 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         if (ReUtil.contains("fetch\\('(.*?)'\\)", html)) {
             //排名信息查询链接有有效期，有效期比较短，可能就几秒钟，所以要先查询出排名信息再作后续解析
             String fetchUrl = ReUtil.get("fetch\\('(.*?)'\\)", html, 1);
-            HttpResponse rankRes = HttpUtil.createGet(fetchUrl).setProxy(proxy).execute();
+            HttpResponse rankRes = HttpUtil.createGet(fetchUrl)
+                    .setProxy(proxy)
+                    .timeout(5000)
+                    .execute();
             if (rankRes.isOk()) {
                 String rankBase64 = rankRes.body();
                 byte[] rankInfoBytes = Base64.decode(rankBase64);

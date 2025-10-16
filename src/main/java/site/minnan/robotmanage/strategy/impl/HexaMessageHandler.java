@@ -1,14 +1,20 @@
 package site.minnan.robotmanage.strategy.impl;
 
-import cn.hutool.core.map.MapBuilder;
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.NumberUtil;
+import cn.hutool.core.util.ReUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
+import site.minnan.robotmanage.infrastructure.utils.BotSessionUtil;
 import site.minnan.robotmanage.strategy.MessageHandler;
 
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -18,6 +24,13 @@ import java.util.stream.Stream;
  */
 @Component("hexa")
 public class HexaMessageHandler implements MessageHandler {
+
+    private BotSessionUtil botSessionUtil;
+
+    @Autowired
+    public void setBotSessionUtil(BotSessionUtil botSessionUtil) {
+        this.botSessionUtil = botSessionUtil;
+    }
 
     /**
      * 起源技能核心需求数量
@@ -46,6 +59,9 @@ public class HexaMessageHandler implements MessageHandler {
             128, 135, 143, 150, 158, 165, 173, 180, 188, 375
     };
 
+    /**
+     * 通用技能核心需求数量
+     */
     private static final int[] USAGE_COMMON = new int[]{
             0, 125, 38, 44, 50, 57, 63, 69, 75, 72, 300,
             110, 124, 138, 152, 165, 179, 193, 207, 220,
@@ -53,225 +69,285 @@ public class HexaMessageHandler implements MessageHandler {
     };
 
     /**
-     * 储存六转各技能信息
+     * 各版本技能数量
      *
-     * @param usageMatrix 需求数量矩阵
-     * @param usageTotal  各技能需求总量
-     * @param label
-     * @param grandTotal  总需求量
+     * @param h
+     * @param m
+     * @param v
+     * @param c
      */
-    private record HexaInfo(int[][] usageMatrix, int[] usageTotal, String[] label, int grandTotal) {
+    private record SkillCount(int h, int m, int v, int c) {
     }
 
-    //newAge版本六转信息
-//    private static final HexaInfo newAgeHexa;
+    /**
+     * 储存用户的六转等级
+     *
+     * @param h 起源等级
+     * @param m 精通等级
+     * @param v V技能等级
+     * @param c 通用等级
+     */
+    private record UserHexa(List<Integer> h, List<Integer> m, List<Integer> v, List<Integer> c) {
+    }
+
+//    private static final Map<String, SkillCount> skillCountMap;
 //
-//    //梦都版本六转信息
-//    private static final HexaInfo dreamerHexa;
-
-    private static final Map<String, HexaInfo> hexaVersion;
-
-    private record Range(int start, int end) {
-    }
-
-    //第一层键，版本名称，第二层键，分技能查询的名称，
-    private static final Map<String, Map<String, Range>> partInfoMap;
-
-
-    /**
-     * 需求数量矩阵
-     */
-//    private static final int[][] USAGE_MATRIX = new int[][]{USAGE_SKILL, USAGE_MASTERY, USAGE_ENHANCE, USAGE_ENHANCE, USAGE_ENHANCE, USAGE_ENHANCE};
-
-//    private static final String[] LABEL = new String[]{"起源", "精通", "V1", "V2", "V3", "V4"};
-
-    /**
-     * 各技能需求总量
-     */
-//    private static final int[] USAGE_TOTAL;
-
-    /**
-     * 总需求量
-     */
-//    private static final int GRAND_TOTAL;
+//    private static final Map<String, String[][]> labelVersion;
 
     private static final String VERSION_NEW_AGE = "newAge";
 
     private static final String VERSION_DREAMER = "dreamer";
 
-    static {
-        int skillTotal = Arrays.stream(USAGE_SKILL).sum();
-        int masteryTotal = Arrays.stream(USAGE_MASTERY).sum();
-        int enhanceTotal = Arrays.stream(USAGE_ENHANCE).sum();
-        int commonTotal = Arrays.stream(USAGE_COMMON).sum();
+    private static final String VERSION_NEXT = "next";
 
-        HexaInfo newAgeHexa = new HexaInfo(new int[][]{USAGE_SKILL, USAGE_MASTERY, USAGE_ENHANCE, USAGE_ENHANCE, USAGE_ENHANCE, USAGE_ENHANCE},
-                new int[]{skillTotal, masteryTotal, enhanceTotal, enhanceTotal, enhanceTotal, enhanceTotal},
-                new String[]{"起源", "精通", "V1", "V2", "V3", "V4"},
-                skillTotal + masteryTotal + enhanceTotal * 4);
+    private static final String VERSION_ASSEMBLE = "assemble";
 
-        HexaInfo dreamerHexa = new HexaInfo(new int[][]{USAGE_SKILL, USAGE_MASTERY, USAGE_MASTERY, USAGE_ENHANCE, USAGE_ENHANCE, USAGE_ENHANCE, USAGE_ENHANCE, USAGE_COMMON},
-                new int[]{skillTotal, masteryTotal, masteryTotal, enhanceTotal, enhanceTotal, enhanceTotal, enhanceTotal, commonTotal},
-                new String[]{"起源", "精通1", "精通2", "V1", "V2", "V3", "V4", "通用"},
-                skillTotal + masteryTotal * 2 + enhanceTotal * 4 + commonTotal);
+    private enum Version {
 
-        hexaVersion = new HashMap<>();
-        hexaVersion.put(VERSION_NEW_AGE, newAgeHexa);
-        hexaVersion.put(VERSION_DREAMER, dreamerHexa);
-//        GRAND_TOTAL = skillTotal + masteryTotal + enhanceTotal * 4;
-//        USAGE_TOTAL = new int[]{skillTotal, masteryTotal, enhanceTotal, enhanceTotal, enhanceTotal, enhanceTotal};
-        Map<String, Range> partNewAge = MapBuilder.create(new HashMap<String, Range>())
-                .put("H", new Range(0, 1))
-                .put("精通", new Range(1, 2))
-                .put("V", new Range(2, 6))
-                .build();
+        NEW_AGE("newAge", new SkillCount(1, 1, 4, 0), new String[][]{{"起源"}, {"精通"}, {"V1", "V2", "V3", "V4"}, {}}),
 
-        Map<String, Range> partDreamer = MapBuilder.create(new HashMap<String, Range>())
-                .put("H", new Range(0, 1))
-                .put("精通", new Range(1, 3))
-                .put("V", new Range(3, 7))
-                .put("通用", new Range(7, 8))
-                .build();
+        DREAMER("dreamer", new SkillCount(1, 2, 4, 1), new String[][]{{"起源"}, {"精通1", "精通2"}, {"V1", "V2", "V3", "V4"}, {"通用"}}),
 
-        partInfoMap = new HashMap<>();
-        partInfoMap.put(VERSION_NEW_AGE, partNewAge);
-        partInfoMap.put(VERSION_DREAMER, partDreamer);
+        NEXT("next", new SkillCount(1, 4, 4, 1), new String[][]{{"起源"}, {"精通1", "精通2", "精通3", "精通4"}, {"V1", "V2", "V3", "V4"}, {"通用"}}),
 
+        ASSEMBLE("assemble", new SkillCount(2, 4, 4, 1), new String[][]{{"起源1", "起源2"}, {"精通1", "精通2", "精通3", "精通4"}, {"V1", "V2", "V3", "V4"}, {"通用"}});
 
+        final String versionName;
+
+        final SkillCount skillCount;
+
+        final String[][] labels;
+
+        Version(String name, SkillCount skillCount, String[][] labels) {
+            this.versionName = name;
+            this.skillCount = skillCount;
+            this.labels = labels;
+        }
+
+        static Version getByName(String name) {
+            Version[] values = values();
+            for (Version value : values) {
+                if (value.versionName.equalsIgnoreCase(name)) {
+                    return value;
+                }
+            }
+            return values[0];
+        }
     }
 
-
-    @Value("${game_version:newAge}")
-    private String gameVersion;
-
-    /**
-     * 处理消息
-     *
-     * @param dto
-     * @return
-     */
-    @Override
-    public Optional<String> handleMessage(MessageDTO dto) {
-        String message = dto.getRawMessage();
-        String param = message.toLowerCase().replace("hexa", "").strip();
-        String[] paramString = param.split("\\s+");
-        if (!NumberUtil.isNumber(paramString[0])) {
-            return partCalculator(paramString);
-        }
-
-        HexaInfo hexaInfo = hexaVersion.get(gameVersion);
+//    static {
+//        skillCountMap = Map.of(
+//                VERSION_NEW_AGE, new SkillCount(1, 1, 4, 0),
+//                VERSION_DREAMER, new SkillCount(1, 2, 4, 1),
+//                VERSION_NEXT, new SkillCount(1, 4, 4, 1),
+//                VERSION_ASSEMBLE, new SkillCount(2, 4, 4, 1)
+//        );
+//
+//        labelVersion = Map.of(
+//                VERSION_NEW_AGE, new String[][]{{"起源"}, {"精通"}, {"V1", "V2", "V3", "V4"}, {}},
+//                VERSION_DREAMER, new String[][]{{"起源"}, {"精通1", "精通2"}, {"V1", "V2", "V3", "V4"}, {"通用"}},
+//                VERSION_NEXT, new String[][]{{"起源"}, {"精通1", "精通2", "精通3", "精通4"}, {"V1", "V2", "V3", "V4"}, {"通用"}}
+//        );
+//
+//
+//    }
 
 
-        if (paramString.length != hexaInfo.usageTotal.length) {
-            return Optional.of(invalidTip());
-        }
-        for (String l : paramString) {
-            if (!NumberUtil.isNumber(l)) {
-                return Optional.of(invalidTip());
+        @Value("${game_version:dreamer}")
+        private String gameVersion;
+
+        /**
+         * 处理消息
+         *
+         * @param dto
+         * @return
+         */
+        @Override
+        public Optional<String> handleMessage (MessageDTO dto){
+            String message = dto.getRawMessage();
+            if ("hexa".equals(message.strip())) {
+                return Optional.of(tips());
             }
-        }
-        int[] levels = Stream.of(paramString).mapToInt(Integer::parseInt).toArray();
-
-        List<String> replyMessage = new ArrayList<>();
-        int total = 0;
-        for (int i = 0; i < levels.length; i++) {
-            int level = levels[i];
-            if (level < 0 || level > 30) {
-                return Optional.of(invalidTip());
+            String param = message.toLowerCase().replace("hexa", "").strip();
+            try {
+                if (param.startsWith("set")) {
+                    UserHexa target = parseUserHexa(param);
+                    botSessionUtil.startSession(dto.getGroupId(), dto.getSender().userId(), d -> doCalculate(d, target));
+                    String reply = """
+                            已设置进度目标：
+                            起源：%s
+                            精通：%s
+                            V强化：%s
+                            通用：%s,
+                            请依次按格式输入当前等级
+                            """.formatted(
+                            target.h != null ? target.h.stream().map(String::valueOf).collect(Collectors.joining(",")) : "-",
+                            target.m != null ? target.m.stream().map(String::valueOf).collect(Collectors.joining(",")) : "-",
+                            target.v != null ? target.v.stream().map(String::valueOf).collect(Collectors.joining(",")) : "-",
+                            target.c != null ? target.c.stream().map(String::valueOf).collect(Collectors.joining(",")) : "-"
+                    );
+                    return Optional.of(reply);
+                } else {
+                    return doCalculate(dto, maxTarget());
+                }
+            } catch (Exception e) {
+                return Optional.of("请输入正确的计算指令" + "\n" + tips());
             }
-            int[] usage = hexaInfo.usageMatrix[i];
-            int totalSpent = Arrays.stream(ArrayUtil.sub(usage, 0, level + 1)).sum();
-            total += totalSpent;
-            int totalNeed = hexaInfo.usageTotal[i];
-            int needToMax = totalNeed - totalSpent;
+
+        }
+
+        private Optional<String> doCalculate (MessageDTO dto, UserHexa userTarget){
+            String message = dto.getRawMessage();
+            String param = message.toLowerCase().replace("hexa", "").strip();
+            UserHexa userCurrent;
+            try {
+                userCurrent = parseUserHexa(param);
+            } catch (Exception e) {
+                return Optional.of("请输入正确的计算指令" + "\n" + tips());
+            }
+
+            Version version = Version.getByName(gameVersion);
+            String[][] labels = version.labels;
+            CalculatePart sgementh = executeCalculatePart(userCurrent, userTarget, UserHexa::h, USAGE_SKILL, labels[0]);
+            CalculatePart sgementm = executeCalculatePart(userCurrent, userTarget, UserHexa::m, USAGE_MASTERY, labels[1]);
+            CalculatePart sgementv = executeCalculatePart(userCurrent, userTarget, UserHexa::v, USAGE_ENHANCE, labels[2]);
+            CalculatePart sgementc = executeCalculatePart(userCurrent, userTarget, UserHexa::c, USAGE_COMMON, labels[3]);
+
+            String content = Stream.of(sgementh, sgementm, sgementv, sgementc)
+                    .flatMap(e -> e.content.stream())
+                    .collect(Collectors.joining("\n"));
+
+            int totalSpent = Stream.of(sgementh, sgementm, sgementv, sgementc)
+                    .mapToInt(e -> e.spent)
+                    .sum();
+
+            int totalNeed = Stream.of(sgementh, sgementm, sgementv, sgementc)
+                    .mapToInt(e -> e.need)
+                    .sum();
+
             String process = NumberUtil.formatPercent((double) totalSpent / totalNeed, 2);
-            String line = "%s: %d/%d，还需%d个小核升满，进度%s".formatted(hexaInfo.label[i], totalSpent, totalNeed, needToMax, process);
-            replyMessage.add(line);
+
+            String totalLine = "总进度:%d/%d，还需要%d个小核，进度%s".formatted(totalSpent, totalNeed, totalNeed - totalSpent, process);
+
+            botSessionUtil.endSession(dto.getGroupId(), dto.getSender().userId());
+            return Optional.of(content + "\n" + totalLine);
         }
-        int grandTotal = hexaInfo.grandTotal;
-        String totalProcess = NumberUtil.formatPercent((double) total / grandTotal, 2);
-        String line = "总进度: %d/%d，还需%d个小核升满，进度%s".formatted(total, grandTotal, grandTotal - total, totalProcess);
-        replyMessage.add(line);
-        return Optional.of("\n" + String.join("\n", replyMessage));
-    }
 
 
-    /**
-     * 局部计算六转核心
-     *
-     * @param paramString
-     * @return
-     */
-    public Optional<String> partCalculator(String[] paramString) {
-        Map<String, Range> detailMap = partInfoMap.get(gameVersion);
-        HexaInfo hexaInfo = hexaVersion.get(gameVersion);
+        private UserHexa parseUserHexa (String userInput) throws Exception {
+            List<String> originLevelString = ReUtil.findAllGroup1("h(\\s?(\\d+\\s*)*)", userInput);
+            List<String> masteryLevelString = ReUtil.findAllGroup1("m(\\s?(\\d+\\s*)*)", userInput);
+            List<String> enhanceLevelString = ReUtil.findAllGroup1("v(\\s?(\\d+\\s*)*)", userInput);
+            List<String> commonLevelString = ReUtil.findAllGroup1("c(\\s?(\\d+\\s*)*)", userInput);
 
-        String partName = paramString[0].toUpperCase();
-        Range range = detailMap.get(partName);
-        if (range == null) {
-            return Optional.of(invalidTip());
-        }
-        if (paramString.length - 1 != range.end - range.start) {
-            return Optional.of(invalidTip());
-        }
-        for (int i = 1; i < paramString.length; i++) {
-            if (!NumberUtil.isNumber(paramString[i])) {
-                return Optional.of(invalidTip());
+            Version version = Version.getByName(gameVersion);
+            SkillCount skillCount = version.skillCount;
+
+            List<Integer> h = null;
+            List<Integer> m = null;
+            List<Integer> v = null;
+            List<Integer> c = null;
+
+            if (CollUtil.isNotEmpty(originLevelString)) {
+                String levelString = originLevelString.get(0);
+                List<Integer> levels = splitLevel(levelString);
+                int step = Math.min(levels.size(), skillCount.h);
+                h = levels.subList(0, step);
             }
-        }
-        int[] levels = Stream.of(paramString).skip(1).mapToInt(Integer::parseInt).toArray();
 
-        List<String> replyMessage = new ArrayList<>();
-        for (int i = 0; i < levels.length; i++) {
-            int level = levels[i];
-            if (level < 0 || level > 30) {
-                return Optional.of(invalidTip());
+            if (CollUtil.isNotEmpty(masteryLevelString)) {
+                String levelString = masteryLevelString.get(0);
+                List<Integer> levels = splitLevel(levelString);
+                int step = Math.min(levels.size(), skillCount.m);
+                m = levels.subList(0, step);
             }
-            int[] usage = hexaInfo.usageMatrix[i + range.start];
-            int totalSpent = Arrays.stream(ArrayUtil.sub(usage, 0, level + 1)).sum();
-            int totalNeed = hexaInfo.usageTotal[i + range.start];
-            int needToMax = totalNeed - totalSpent;
-            String process = NumberUtil.formatPercent((double) totalSpent / totalNeed, 2);
-            String line = "%s: %d/%d，还需%d个小核升满，进度%s".formatted(hexaInfo.label[i + range.start], totalSpent, totalNeed, needToMax, process);
-            replyMessage.add(line);
-        }
-        return Optional.of("\n" + String.join("\n", replyMessage));
-    }
 
-    /**
-     * 计算参数错误提示
-     * @return
-     */
-    public String invalidTip() {
-        if (VERSION_NEW_AGE.equals(gameVersion)) {
+            if (CollUtil.isNotEmpty(enhanceLevelString)) {
+                String levelString = enhanceLevelString.get(0);
+                List<Integer> levels = splitLevel(levelString);
+                int step = Math.min(levels.size(), skillCount.v);
+                v = levels.subList(0, step);
+            }
+
+            if (CollUtil.isNotEmpty(commonLevelString)) {
+                String levelString = commonLevelString.get(0);
+                List<Integer> levels = splitLevel(levelString);
+                int step = Math.min(levels.size(), skillCount.c);
+                c = levels.subList(0, step);
+            }
+
+            boolean invalidate = Stream.of(h, m, v, c)
+                    .filter(Objects::nonNull)
+                    .flatMap(Collection::stream)
+                    .anyMatch(e -> e < 0 || e > 30);
+            if (invalidate) {
+                throw new Exception("参数输入错误");
+            }
+            return new UserHexa(h, m, v, c);
+        }
+
+
+        private UserHexa maxTarget () {
+            Version version = Version.getByName(gameVersion);
+            SkillCount skillCount = version.skillCount;
+
+            List<Integer> h = Collections.nCopies(skillCount.h, 30);
+            List<Integer> m = Collections.nCopies(skillCount.m, 30);
+            List<Integer> v = Collections.nCopies(skillCount.v, 30);
+            List<Integer> c = Collections.nCopies(skillCount.c, 30);
+
+            return new UserHexa(h, m, v, c);
+        }
+
+        private record CalculatePart(List<String> content, Integer spent, Integer need) {
+        }
+
+        private CalculatePart executeCalculatePart (UserHexa currentInfo, UserHexa
+        targetInfo, Function < UserHexa, List < Integer >> getProcess,int[] usage, String[] labels){
+            List<Integer> current = getProcess.apply(currentInfo);
+            List<Integer> target = getProcess.apply(targetInfo);
+            if (current == null || target == null) {
+                return new CalculatePart(List.of(), 0, 0);
+            }
+            Assert.isTrue(current.size() <= labels.length && target.size() <= labels.length);
+
+            Iterator<Integer> currentItr = current.iterator();
+            Iterator<Integer> targetItr = target.iterator();
+
+            int idx = 0;
+            List<String> result = new ArrayList<>();
+            int totalNeed = 0;
+            int totalSpent = 0;
+            while (currentItr.hasNext() && targetItr.hasNext()) {
+                Integer currentItem = currentItr.next();
+                Integer targetItem = targetItr.next();
+                currentItem = Math.min(currentItem, targetItem);
+                String label = labels[idx];
+                int need = Arrays.stream(ArrayUtil.sub(usage, 0, targetItem + 1)).sum();
+                int spent = Arrays.stream(ArrayUtil.sub(usage, 0, currentItem + 1)).sum();
+                totalNeed += need;
+                totalSpent += spent;
+                int needToMax = need - spent;
+                String process = NumberUtil.formatPercent((double) spent / need, 2);
+                String line = "%s: %d/%d，还需%d个小核，进度%s".formatted(label, spent, need, needToMax, process);
+                result.add(line);
+                idx++;
+            }
+
+            return new CalculatePart(result, totalSpent, totalNeed);
+        }
+
+        public List<Integer> splitLevel (String s){
+            String[] split = s.trim().split("\\s+");
+            return Arrays.stream(split)
+                    .map(Integer::parseInt)
+                    .toList();
+        }
+
+        public String tips () {
             return """
-                    请输入正确的计算参数
-                    整体计算：hexa 起源 精通 V1 V2 V3 V4
-                    局部计算：
-                    起源：hexah 起源等级
-                    精通：hexa精通 精通等级
-                    V技能：hexav V1 V2 V3 V4
-                    """;
-        } else if (VERSION_DREAMER.equals(gameVersion)) {
-            return """
-                    请输入正确的计算参数
-                    整体计算：hexa 起源 精通1 精通2 V1 V2 V3 V4 通用
-                    局部计算：
-                    起源：hexah 起源等级
-                    精通：hexa精通 精通1等级 精通2等级
-                    V技能：hexav V1 V2 V3 V4
-                    通用：hexa通用 通用等级
-                    """;
-        } else {
-            return """
-                    请输入正确的计算参数
-                    整体计算：hexa 起源 精通1 精通2 V1 V2 V3 V4 通用
-                    局部计算：
-                    起源：hexah 起源等级
-                    精通：hexa精通 精通1等级 精通2等级
-                    V技能：hexav V1 V2 V3 V4
-                    通用：hexa通用 通用等级
+                    hexa h 起源等级 m 精通1等级 精通2等级 v V1等级 V2等级 V3等级 V4等级 c 通用等级
+                    如果输入的技能数量少于游戏实际数量，则认为未输入的技能不参与计算
                     """;
         }
     }
-}

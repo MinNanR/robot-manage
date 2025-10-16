@@ -120,7 +120,7 @@ public class GregorianFestival {
     public static List<String> getFestivals(DateTime date) {
         Pair<Integer, Integer> pair = new Pair<>(date.monthBaseOne(), date.dayOfMonth());
         List<String> mFtv = M_FTV.getValues(pair);
-        Triple triple = new Triple(date.month(), date.weekOfMonth(), date.dayOfWeek());
+        Triple triple = new Triple(date.monthBaseOne(), date.weekOfMonth(), date.dayOfWeek());
         List<String> wFtv = W_FTV.getValues(triple);
         mFtv.addAll(wFtv);
         return mFtv;

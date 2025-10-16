@@ -45,10 +45,7 @@ import java.net.Proxy;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.function.Supplier;
 
 /**
@@ -82,7 +79,7 @@ public class QueryMessageHandler implements MessageHandler {
 
     private Proxy proxy;
 
-    private static final ExecutorService queryExecutorPool = Executors.newFixedThreadPool(3);
+    private static final ExecutorService queryExecutorPool = Executors.newFixedThreadPool(5);
 
     /**
      * 记录每个用户正在查询的用户的查询目标
@@ -117,6 +114,11 @@ public class QueryMessageHandler implements MessageHandler {
     public Optional<String> handleMessage(MessageDTO dto) {
         if (queryExecutorPool.isShutdown()) {
             return Optional.of("查询功能已关闭，请稍后再试");
+        }
+        int waitingCount = ((ThreadPoolExecutor) queryExecutorPool).getQueue().size();
+        String groupId = dto.getGroupId();
+        if (waitingCount >= 20 && !"122820573".equals(groupId)) {
+            return Optional.of("服务器繁忙，请稍后再试");
         }
         String userId = dto.getSender().userId();
         String taskKey = USER_QUERY_TASK_KEY_TEMPLATE.formatted(userId);

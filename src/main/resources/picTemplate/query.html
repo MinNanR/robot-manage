@@ -250,7 +250,16 @@
                     fontSize: 16
                 },
                 itemStyle: {
-                    color: "#709ce9"
+                    //color: "#709ce9"
+                    color: (params => {
+                        if(params.value > 7000) {
+                            return "#FF0000"
+                        } else if (params.value > 5000) {
+                            return "#f3b334"
+                        } else {
+                            return "#709ce9"
+                        }
+                    })
                 },
                 animation: false
             },
