@@ -1,6 +1,7 @@
 package site.minnan.robotmanage.service;
 
 import jakarta.persistence.EntityNotFoundException;
+import site.minnan.robotmanage.entity.aggregate.CharacterRecord;
 import site.minnan.robotmanage.entity.aggregate.Nick;
 import site.minnan.robotmanage.entity.aggregate.QueryMap;
 import site.minnan.robotmanage.entity.dto.GetNickListDTO;
@@ -8,6 +9,8 @@ import site.minnan.robotmanage.entity.dto.GetQueryMapListDTO;
 import site.minnan.robotmanage.entity.dto.UpdateQueryMapDTO;
 import site.minnan.robotmanage.entity.vo.ListQueryVO;
 import site.minnan.robotmanage.entity.vo.bot.CharacterData;
+
+import java.util.Optional;
 
 /**
  * 角色信息相关服务
@@ -86,4 +89,11 @@ public interface CharacterSupportService {
      * @param dto
      */
     void addQueryMap(UpdateQueryMapDTO dto);
+
+    /**
+     * 查询经验每日任务
+     */
+    void expDailyTask();
+
+    Optional<CharacterData> queryCharacterInfoLocal(String queryName, String region);
 }

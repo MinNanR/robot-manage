@@ -6,7 +6,6 @@ import cn.hutool.core.convert.NumberChineseFormatter;
 import cn.hutool.core.date.DateField;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
-import cn.hutool.core.date.TimeInterval;
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.core.util.StrUtil;
@@ -30,10 +29,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-import site.minnan.robotmanage.entity.aggregate.Nick;
-import site.minnan.robotmanage.entity.aggregate.QueryMap;
-import site.minnan.robotmanage.entity.dao.NickRepository;
-import site.minnan.robotmanage.entity.dao.QueryMapRepository;
+import site.minnan.robotmanage.entity.aggregate.*;
+import site.minnan.robotmanage.entity.dao.*;
 import site.minnan.robotmanage.entity.dto.GetNickListDTO;
 import site.minnan.robotmanage.entity.dto.GetQueryMapListDTO;
 import site.minnan.robotmanage.entity.dto.UpdateQueryMapDTO;
@@ -84,6 +81,14 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
 
     @Value("${query_source:mapleranks}")
     private String source;
+    @Autowired
+    private CharacterRecordRepository characterRecordRepository;
+
+    @Autowired
+    private LvExpRepository lvExpRepository;
+
+    @Autowired
+    private CharacterExpDailyRepository characterExpDailyRepository;
 
     public CharacterSupportServiceImpl(QueryMapRepository queryMapRepository, NickRepository nickRepository, RedisUtil redisUtil) {
         this.queryMapRepository = queryMapRepository;
@@ -131,7 +136,7 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
      * @param queryName
      * @return
      */
-    public CharacterData fetchCharacterInfoGg(String queryName,String server) {
+    public CharacterData fetchCharacterInfoGg(String queryName, String server) {
         String baseQueryUrl;
         if ("u".equals(server)) {
             baseQueryUrl = "https://api.maplestory.gg/v2/public/character/gms/";
@@ -647,4 +652,75 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
                 .collect(Collectors.toList());
     }
 
+
+    @Override
+    public void expDailyTask() {
+        List<CharacterRecord> allCharacterList = characterRecordRepository.findAll();
+
+        DateTime expiredDate = DateTime.now().offset(DateField.DAY_OF_YEAR, -30);
+
+        java.util.function.Predicate<String> isExpired = s -> {
+            DateTime date = DateTime.of(s, "yyyy-MM-dd HH:mm:ss");
+            return date.before(expiredDate);
+        };
+
+
+        Map<Boolean, List<CharacterRecord>> groupByExpired = allCharacterList.stream()
+                .collect(Collectors.groupingBy(e -> isExpired.test(e.getQueryTime())));
+
+        List<CharacterRecord> executeTargetList = groupByExpired.get(false);
+
+        executeTargetList.forEach(this::fetchCharacterExp);
+
+    }
+
+    public void fetchCharacterExp(CharacterRecord character) {
+        String characterName = character.getCharacterName();
+        String region = character.getRegion();
+
+        String url = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=overall&id=weekly&reboot_index=0&page_index=1&character_name=%s"
+                .formatted(region, characterName);
+
+        HttpResponse expResponse = HttpUtil.createGet(url).execute();
+        String expResponseJsonString = expResponse.body();
+        JSONObject expResponseJson = JSONUtil.parseObj(expResponseJsonString);
+        JSONArray ranksJsonArray = expResponseJson.getJSONArray("ranks");
+
+        if (ranksJsonArray == null || ranksJsonArray.isEmpty()) {
+            return;
+        }
+
+        JSONObject data = ranksJsonArray.getJSONObject(0);
+
+        DateTime now = DateTime.now();
+        String time = now.toString("yyyy-MM-dd HH:mm:ss");
+        String recordDate = now.toString("yyyy-MM-dd");
+
+        CharacterExpDaily expRecord = new CharacterExpDaily(character, recordDate, data);
+        expRecord.setCreateTime(time);
+
+        LvExp lvExp = lvExpRepository.findByLv(Integer.parseInt(expRecord.getLevel()));
+        BigDecimal expRequired = new BigDecimal(lvExp.getExpToNextLevel());
+        BigDecimal currentExp = new BigDecimal(expRecord.getCurrentExp());
+        BigDecimal epxPercent = currentExp.divide(expRequired, 6, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
+        String expPercent = String.valueOf(epxPercent.doubleValue());
+        expRecord.setLevePercent(expPercent);
+
+        characterExpDailyRepository.save(expRecord);
+    }
+
+    @Override
+    public Optional<CharacterData> queryCharacterInfoLocal(String queryName, String region) {
+        CharacterRecord characterRecord = characterRecordRepository.getByCharacterNameIgnoreCaseAndRegion(queryName, region);
+
+        if (characterRecord == null) {
+            return Optional.empty();
+        }
+
+        CharacterData data = new CharacterData();
+        data.setName(characterRecord.getCharacterName());
+
+
+        return  Optional.empty();
+    }
 }
