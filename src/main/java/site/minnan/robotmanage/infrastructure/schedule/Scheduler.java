@@ -3,9 +3,11 @@ package site.minnan.robotmanage.infrastructure.schedule;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import site.minnan.robotmanage.service.CharacterSupportService;
 import site.minnan.robotmanage.service.JmsService;
 import site.minnan.robotmanage.service.MaintainService;
 import site.minnan.robotmanage.service.ProxyService;
@@ -40,6 +42,9 @@ public class Scheduler {
     private ProxyService proxyService;
 
     private final JmsService jmsService;
+
+    @Autowired
+    private CharacterSupportService characterSupportService;
 
     public Scheduler(MaintainService maintainService, HolidayMessageHandler holidayMessageHandler, ProxyService proxyService, JmsService jmsService) {
         this.maintainService = maintainService;
@@ -83,5 +88,12 @@ public class Scheduler {
 //    @Scheduled(cron = "0/5 * * * * ? ")
     public void query() {
         jmsService.schedule();
+    }
+
+    @Scheduled(cron = "0 0 4 * * *")
+    public void characterExp() {
+        log.info("开始查询角色经验数据");
+        characterSupportService.expDailyTask();
+        log.info("结束查询角色经验数据");
     }
 }

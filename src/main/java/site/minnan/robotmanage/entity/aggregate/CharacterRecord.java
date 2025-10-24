@@ -21,13 +21,21 @@ public class CharacterRecord {
     private String region;
 
     @Column(name = "world_id")
-    private String worldId;
+    private Integer worldId;
+
+    private Integer level;
+
+    @Column(name = "level_percent")
+    private String levelPercent;
 
     @Column(name = "job_id")
-    private String jobId;
+    private Integer jobId;
 
     @Column(name = "job_detail")
-    private String jobDetail;
+    private Integer jobDetail;
+
+    @Column(name = "character_img_url")
+    private String characterImgUrl;
 
     @Column(name = "update_time")
     private String updateTime;

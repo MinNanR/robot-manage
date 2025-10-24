@@ -82,6 +82,13 @@ public class CharacterData {
         this.globalLevelRank = "-";
     }
 
+    public void setRank(CharacterData data) {
+        this.serverClassRank = data.getServerClassRank();
+        this.serverLevelRank = data.getServerLevelRank();
+        this.globalClassRank = data.getGlobalClassRank();
+        this.globalLevelRank = data.getGlobalLevelRank();
+    }
+
     public String parseLegionPower() {
         return "%.2fM".formatted((float) Integer.parseInt(legionPower) / 1000000);
     }

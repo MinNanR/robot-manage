@@ -27,7 +27,9 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.templatemode.TemplateMode;
 import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
+import site.minnan.robotmanage.entity.aggregate.CharacterRecord;
 import site.minnan.robotmanage.entity.aggregate.LvExp;
+import site.minnan.robotmanage.entity.dao.CharacterRecordRepository;
 import site.minnan.robotmanage.entity.dao.LvExpRepository;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
 import site.minnan.robotmanage.entity.dto.SendMessageDTO;
@@ -63,6 +65,9 @@ public class QueryMessageHandler implements MessageHandler {
     private LvExpRepository lvExpRepository;
 
     private BotService botService;
+
+    @Autowired
+    private CharacterRecordRepository characterRecordRepository;
 
     private RedisUtil redisUtil;
 
@@ -189,7 +194,14 @@ public class QueryMessageHandler implements MessageHandler {
         CharacterData c;
         try {
             String server = (String) dto.getPayload().getOrDefault("server", "u");
-            c = characterSupportService.fetchCharacterInfo(queryTarget, server);
+//            c = characterSupportService.fetchCharacterInfo(queryTarget, server);
+            String region = "u".equals(server) ? "na" : "eu";
+            CharacterRecord record = characterRecordRepository.getByCharacterNameIgnoreCaseAndRegion(queryTarget, region);
+            if (record == null) {
+                characterSupportService.initCharacter(queryTarget, region);
+            }
+            Optional<CharacterData> characterDataOpt = characterSupportService.queryCharacterInfoLocal(queryTarget, region);
+            c = characterDataOpt.orElseThrow(() -> new EntityNotFoundException("角色不存在"));
         } catch (Exception e) {
             log.error("查询角色信息失败，查询目标为" + queryTarget, e);
             return Optional.of("查询失败");

@@ -96,4 +96,12 @@ public interface CharacterSupportService {
     void expDailyTask();
 
     Optional<CharacterData> queryCharacterInfoLocal(String queryName, String region);
+
+    /**
+     * 初始化角色信息
+     *
+     * @param queryName
+     * @param region
+     */
+    void initCharacter(String queryName, String region);
 }
