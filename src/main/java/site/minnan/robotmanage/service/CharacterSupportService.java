@@ -38,7 +38,7 @@ public interface CharacterSupportService {
     /**
      * 解析查询目标
      *
-     * @param dto
+     * @param
      * @return
      */
     String parseQueryContent(String queryContent, String userId);
@@ -93,7 +93,7 @@ public interface CharacterSupportService {
     /**
      * 查询经验每日任务
      */
-    void expDailyTask();
+    void expDailyTask(int pageIndex);
 
     Optional<CharacterData> queryCharacterInfoLocal(String queryName, String region);
 

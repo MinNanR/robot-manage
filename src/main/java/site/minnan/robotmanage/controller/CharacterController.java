@@ -1,5 +1,6 @@
 package site.minnan.robotmanage.controller;
 
+import cn.hutool.core.thread.ThreadUtil;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -73,6 +74,12 @@ public class CharacterController {
     @PostMapping("addQueryMap")
     public ResponseEntity<?> addQueryMap(@RequestBody UpdateQueryMapDTO dto) {
         characterSupportService.addQueryMap(dto);
+        return ResponseEntity.success();
+    }
+
+    @PostMapping("triggerDailyTask")
+    public ResponseEntity<?> triggerDailyTask() {
+        ThreadUtil.execAsync(() -> characterSupportService.expDailyTask(0));
         return ResponseEntity.success();
     }
 }

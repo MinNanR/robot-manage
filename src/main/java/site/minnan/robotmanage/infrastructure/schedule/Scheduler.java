@@ -84,16 +84,16 @@ public class Scheduler {
         log.info("结束检查代理服务器状态");
     }
 
-    @Scheduled(cron = "0 0 0/1 * * ? ")
+//    @Scheduled(cron = "0 0 0/1 * * ? ")
 //    @Scheduled(cron = "0/5 * * * * ? ")
     public void query() {
         jmsService.schedule();
     }
 
-    @Scheduled(cron = "0 0 4 * * *")
+    @Scheduled(cron = "0 0 4,5,6 * * *")
     public void characterExp() {
         log.info("开始查询角色经验数据");
-        characterSupportService.expDailyTask();
+        characterSupportService.expDailyTask(0);
         log.info("结束查询角色经验数据");
     }
 }

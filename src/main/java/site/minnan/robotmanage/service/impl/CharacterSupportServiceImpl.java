@@ -658,22 +658,49 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
 
 
     @Override
-    public void expDailyTask() {
-        List<CharacterRecord> allCharacterList = characterRecordRepository.findAll();
-
+    public void expDailyTask(int pageIndex) {
+        DateTime now = DateTime.now();
         DateTime expiredDate = DateTime.now().offset(DateField.DAY_OF_YEAR, -30);
 
-        java.util.function.Predicate<String> isExpired = s -> {
-            DateTime date = DateTime.of(s, "yyyy-MM-dd HH:mm:ss");
-            return date.before(expiredDate);
-        };
+        Specification<CharacterRecord> spec = (((root, query, builder) -> {
+            List<Predicate> list = new ArrayList<>();
+            list.add(builder.lessThan(root.get("updateTime"), now.toDateStr()));
+            list.add(builder.greaterThan(root.get("queryTime"), expiredDate.toDateStr()));
+            return query.where(list.toArray(new Predicate[2])).getRestriction();
+        }));
+        PageRequest pageRequest = PageRequest.of(pageIndex, 300);
+        Page<CharacterRecord> pageRes = characterRecordRepository.findAll(spec, pageRequest);
+        List<CharacterRecord> executeTargetList = pageRes.getContent();
+//        List<CharacterRecord> allCharacterList = characterRecordRepository.findAll(pageRequest);
 
-        Map<Boolean, List<CharacterRecord>> groupByExpired = allCharacterList.stream()
-                .collect(Collectors.groupingBy(e -> isExpired.test(e.getQueryTime())));
 
-        List<CharacterRecord> executeTargetList = groupByExpired.get(false);
+        if (executeTargetList.isEmpty()) {
+            log.warn("查询目标为空");
+            return;
+        }
+        for (CharacterRecord characterRecord : executeTargetList) {
+            try {
+                fetchCharacterExp(characterRecord);
+            } catch (Exception e) {
+                log.error("查询经验任务异常", e);
+            }
+        }
+        try {
+            Thread.sleep(3 * 60 * 1000);
+        } catch (InterruptedException e) {
+            log.error("程序休眠异常", e);
+        }
+        expDailyTask(pageIndex + 1);
 
-        executeTargetList.forEach(this::fetchCharacterExp);
+//        List<List<CharacterRecord>> recordSegmentList = ListUtil.split(executeTargetList, 300);
+//        for (List<CharacterRecord> segment : recordSegmentList) {
+//            segment.forEach(this::fetchCharacterExp);
+//            try {
+//                Thread.sleep(3 * 60 * 1000);
+//            } catch (InterruptedException e) {
+//                log.error("程序休眠异常", e);
+//            }
+//        }
 
     }
 
@@ -690,6 +717,7 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         JSONArray ranksJsonArray = expResponseJson.getJSONArray("ranks");
 
         if (ranksJsonArray == null || ranksJsonArray.isEmpty()) {
+            log.warn("查询信息为空，角色：[{}]", characterName);
             return;
         }
 
@@ -723,6 +751,7 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         character.setJobId(data.getInt("jobID"));
         character.setJobDetail(data.getInt("jobDetail"));
         character.setCharacterImgUrl(data.getStr("characterImgURL"));
+        character.setLevelPercent(expPercent);
         character.setUpdateTime(time);
         characterRecordRepository.save(character);
 
@@ -841,11 +870,12 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
             for (int i = 0; i < expRecordList.size() - 1; i++) {
                 CharacterExpDaily item = expRecordList.get(i);
                 int level1 = Integer.parseInt(item.getLevel());
-                Double levelPercent = level1 + Double.parseDouble(item.getLevePercent()) / 100;
+//                Double levelPercent = level1 + Double.parseDouble(item.getLevePercent()) / 100;
                 String currentExp = item.getCurrentExp();
                 CharacterExpDaily nextItem = expRecordList.get(i + 1);
                 String nextExp = nextItem.getCurrentExp();
                 int level2 = Integer.parseInt(nextItem.getLevel());
+                Double levelPercent = level2 + Double.parseDouble(nextItem.getLevePercent()) / 100;
                 BigDecimal expDifference;
                 if (level1 == level2) {
                     expDifference = new BigDecimal(nextExp).subtract(new BigDecimal(currentExp));
