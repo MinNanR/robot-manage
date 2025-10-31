@@ -173,30 +173,22 @@ public class QueryMessageHandler implements MessageHandler {
             return "[CQ:image,file=%s,subType=0]".formatted(url);
         };
 
+        String server = (String) dto.getPayload().getOrDefault("server", "u");
+        String region = "u".equals(server) ? "na" : "eu";
+        CharacterRecord record = characterRecordRepository.getByCharacterNameIgnoreCaseAndRegion(queryTarget, region);
         String pngPath = "%s/%s/%s.png".formatted(folder, today, queryTarget.toLowerCase());
         if (FileUtil.exist(pngPath)) {
-            //经验异常的角色可以尝试重新查询，每天可以重试5次，
-            //经验异常：昨日经验为0
-            String exceptExpKey = exceptExpKey(today, queryTarget.toLowerCase());
-            if (!redisUtil.hasKey(exceptExpKey)) {
+            DateTime updateTime = DateTime.of(record.getUpdateTime(), "yyyy-MM-dd HH:mm:ss");
+            DateTime queryTime = DateTime.of(record.getQueryTime(), "yyyy-MM-dd HH:mm:ss");
+            //如果更新时间和查询时间是同一天，则返回图片
+            if(DateUtil.isSameDay(updateTime, queryTime)) {
                 return Optional.of(getResult.get());
-            } else {
-                int countDown = (int) redisUtil.getValue(exceptExpKey);
-                countDown -= 1;
-                if (countDown == 0) {
-                    redisUtil.delete(exceptExpKey);
-                } else {
-                    redisUtil.valueSet(exceptExpKey, countDown);
-                }
             }
         }
 
         CharacterData c;
         try {
-            String server = (String) dto.getPayload().getOrDefault("server", "u");
 //            c = characterSupportService.fetchCharacterInfo(queryTarget, server);
-            String region = "u".equals(server) ? "na" : "eu";
-            CharacterRecord record = characterRecordRepository.getByCharacterNameIgnoreCaseAndRegion(queryTarget, region);
             if (record == null) {
                 characterSupportService.initCharacter(queryTarget, region);
             }

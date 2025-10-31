@@ -13,6 +13,7 @@ import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONArray;
+import cn.hutool.json.JSONException;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import jakarta.persistence.EntityNotFoundException;
@@ -668,7 +669,7 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
             list.add(builder.greaterThan(root.get("queryTime"), expiredDate.toDateStr()));
             return query.where(list.toArray(new Predicate[2])).getRestriction();
         }));
-        PageRequest pageRequest = PageRequest.of(pageIndex, 300);
+        PageRequest pageRequest = PageRequest.of(pageIndex, 200);
         Page<CharacterRecord> pageRes = characterRecordRepository.findAll(spec, pageRequest);
         List<CharacterRecord> executeTargetList = pageRes.getContent();
 //        List<CharacterRecord> allCharacterList = characterRecordRepository.findAll(pageRequest);
@@ -681,16 +682,21 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         for (CharacterRecord characterRecord : executeTargetList) {
             try {
                 fetchCharacterExp(characterRecord);
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    log.error("程序休眠异常", e);
+                }
             } catch (Exception e) {
                 log.error("查询经验任务异常", e);
             }
         }
-        try {
-            Thread.sleep(3 * 60 * 1000);
-        } catch (InterruptedException e) {
-            log.error("程序休眠异常", e);
-        }
-        expDailyTask(pageIndex + 1);
+//        try {
+//            Thread.sleep(3 * 60 * 1000);
+//        } catch (InterruptedException e) {
+//            log.error("程序休眠异常", e);
+//        }
+//        expDailyTask(pageIndex + 1);
 
 //        List<List<CharacterRecord>> recordSegmentList = ListUtil.split(executeTargetList, 300);
 //        for (List<CharacterRecord> segment : recordSegmentList) {
@@ -713,13 +719,26 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
 
         HttpResponse expResponse = HttpUtil.createGet(url).execute();
         String expResponseJsonString = expResponse.body();
-        JSONObject expResponseJson = JSONUtil.parseObj(expResponseJsonString);
-        JSONArray ranksJsonArray = expResponseJson.getJSONArray("ranks");
+        JSONArray ranksJsonArray;
+        try {
+            JSONObject expResponseJson = JSONUtil.parseObj(expResponseJsonString);
+            ranksJsonArray = expResponseJson.getJSONArray("ranks");
 
-        if (ranksJsonArray == null || ranksJsonArray.isEmpty()) {
-            log.warn("查询信息为空，角色：[{}]", characterName);
+        }  catch (JSONException e) {
+            log.warn("查询信息为空，角色：[{}]",characterName);
+            log.info("查询到空信息：{}", expResponseJsonString);
+            try {
+                Thread.sleep(10 * 60 * 1000);
+            } catch (Exception e1) {
+                log.error("程序休眠异常", e1);
+            }
+            return;
+        } catch (Exception e) {
+            log.warn("查询信息为空，角色：[{}]",characterName);
+            log.info("查询到空信息：{}", expResponseJsonString);
             return;
         }
+
 
         JSONObject data = ranksJsonArray.getJSONObject(0);
 
@@ -881,11 +900,10 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
                     expDifference = new BigDecimal(nextExp).subtract(new BigDecimal(currentExp));
                 } else {
                     //升级的情况
-                    Long fullExp = lvExpMap.get(level2);
+                    Long fullExp = lvExpMap.get(level1);
                     expDifference = new BigDecimal(fullExp).subtract(new BigDecimal(currentExp)).add(new BigDecimal(nextExp));
-                    while (level1 < level2) {
-                        level1++;
-                        fullExp = lvExpMap.get(level2);
+                    while (++level1 < level2) {
+                        fullExp = lvExpMap.get(level1);
                         expDifference = expDifference.add(new BigDecimal(fullExp));
                     }
                 }
@@ -895,6 +913,9 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
             }
         }
         characterData.setExpData(expDataList);
+
+        characterRecord.setQueryTime(DateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+        characterRecordRepository.save(characterRecord);
 
         return Optional.of(characterData);
     }

@@ -90,7 +90,7 @@ public class Scheduler {
         jmsService.schedule();
     }
 
-    @Scheduled(cron = "0 0 4,5,6 * * *")
+    @Scheduled(cron = "0 0/5 4,5,6 * * *")
     public void characterExp() {
         log.info("开始查询角色经验数据");
         characterSupportService.expDailyTask(0);
