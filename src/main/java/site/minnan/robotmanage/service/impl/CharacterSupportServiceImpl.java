@@ -767,8 +767,10 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         characterExpDailyRepository.save(expRecord);
 
         character.setLevel(data.getInt("level"));
-        character.setJobId(data.getInt("jobID"));
-        character.setJobDetail(data.getInt("jobDetail"));
+//        character.setJobId(data.getInt("jobID"));
+//        character.setJobDetail(data.getInt("jobDetail"));
+        //2025年11月14日 官网API变更为直接提供职业名，无需自己匹配
+        character.setJobName("jobName");
         character.setCharacterImgUrl(data.getStr("characterImgURL"));
         character.setLevelPercent(expPercent);
         character.setUpdateTime(time);
@@ -796,8 +798,24 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         characterData.setSource("minnan.site");
         characterData.setUpdateTime(characterRecord.getUpdateTime());
 
-        JobMap job = jobMapRepository.getJob(characterRecord.getJobId(), characterRecord.getJobDetail());
-        characterData.setJob(job.getJobName());
+//        JobMap job = jobMapRepository.getJob(characterRecord.getJobId(), characterRecord.getJobDetail());
+//        characterData.setJob(characterRecord.getJobName());
+        String url = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=overall&id=weekly&reboot_index=0&page_index=1&character_name=%s"
+                .formatted(region, queryName);
+        try {
+            HttpResponse jobResponse = HttpUtil.createGet(url).execute();
+            String jobResponseJsonString = jobResponse.body();
+            JSONObject jobObj = JSONUtil.parseObj(jobResponseJsonString);
+            JSONArray jobData = jobObj.getJSONArray("ranks");
+            if (!jobData.isEmpty()) {
+                JSONObject jobInfo = jobData.getJSONObject(0);
+                characterData.setJob(jobInfo.getStr("jobName"));
+            } else {
+                characterData.setJob("");
+            }
+        } catch (Exception e) {
+            characterData.setJob("");
+        }
 
         //处理排名数据
 //        CompletableFuture<CharacterData> rankQuery = CompletableFuture.supplyAsync(() -> {
@@ -812,10 +830,10 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
 //            characterData.setRankEmpty();
 //        }
         String rebootIndex = worldId == 45 || worldId == 70 || worldId == 46 ? "1" : "2";
-        String jobServerRankUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=job&id=%s&reboot_index=%s&page_index=1&character_name=%s"
-                .formatted(region, characterRecord.getJobId(), rebootIndex, queryName);
-        String jobGlobalRankUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=job&id=%s&reboot_index=0&page_index=1&character_name=%s"
-                .formatted(region, characterRecord.getJobId(), queryName);
+        String jobServerRankUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=job&reboot_index=%s&page_index=1&character_name=%s"
+                .formatted(region, rebootIndex, queryName);
+        String jobGlobalRankUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=job&reboot_index=0&page_index=1&character_name=%s"
+                .formatted(region, queryName);
         String levelServerRankUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=overall&id=legendary&reboot_index=1&page_index=%s&character_name=%s"
                 .formatted(region,  rebootIndex, queryName);
         String levelGlobalRankUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=overall&id=legendary&reboot_index=0&page_index=1&character_name=%s"
@@ -956,8 +974,9 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         String expPercent = String.valueOf(epxPercent.doubleValue());
         characterRecord.setLevelPercent(expPercent);
 
-        characterRecord.setJobId(characterJson.getInt("jobID"));
-        characterRecord.setJobDetail(characterJson.getInt("jobDetail"));
+//        characterRecord.setJobId(characterJson.getInt("jobID"));
+//        characterRecord.setJobDetail(characterJson.getInt("jobDetail"));
+        characterRecord.setJobName(characterJson.getStr("jobName"));
         characterRecord.setCharacterImgUrl(characterJson.getStr("characterImgURL"));
 
         DateTime now = DateTime.now();
