@@ -770,7 +770,7 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
 //        character.setJobId(data.getInt("jobID"));
 //        character.setJobDetail(data.getInt("jobDetail"));
         //2025年11月14日 官网API变更为直接提供职业名，无需自己匹配
-        character.setJobName("jobName");
+        character.setJobName(data.getStr("jobName"));
         character.setCharacterImgUrl(data.getStr("characterImgURL"));
         character.setLevelPercent(expPercent);
         character.setUpdateTime(time);
