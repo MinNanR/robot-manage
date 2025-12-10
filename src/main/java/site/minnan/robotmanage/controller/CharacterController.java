@@ -1,10 +1,7 @@
 package site.minnan.robotmanage.controller;
 
 import cn.hutool.core.thread.ThreadUtil;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import site.minnan.robotmanage.entity.aggregate.Nick;
 import site.minnan.robotmanage.entity.aggregate.QueryMap;
 import site.minnan.robotmanage.entity.dto.GetNickListDTO;
@@ -78,8 +75,13 @@ public class CharacterController {
     }
 
     @PostMapping("triggerDailyTask")
-    public ResponseEntity<?> triggerDailyTask() {
-        ThreadUtil.execAsync(() -> characterSupportService.expDailyTask(0));
+    public ResponseEntity<?> triggerDailyTask(@RequestParam("pageCount") Integer pageCount) {
+        ThreadUtil.execAsync(() -> {
+            for (int i = 0; i < pageCount; i++) {
+                characterSupportService.expDailyTask(0);
+                ThreadUtil.safeSleep(1000 * 60 * 3);
+            }
+        });
         return ResponseEntity.success();
     }
 }

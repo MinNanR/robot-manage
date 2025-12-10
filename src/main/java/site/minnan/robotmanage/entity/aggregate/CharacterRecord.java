@@ -42,4 +42,7 @@ public class CharacterRecord {
 
     @Column(name = "query_time")
     private String queryTime;
+
+    @Column(name = "job_name")
+    private String jobName;
 }

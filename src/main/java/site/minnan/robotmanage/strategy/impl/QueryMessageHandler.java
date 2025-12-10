@@ -180,8 +180,8 @@ public class QueryMessageHandler implements MessageHandler {
         if (FileUtil.exist(pngPath)) {
             DateTime updateTime = DateTime.of(record.getUpdateTime(), "yyyy-MM-dd HH:mm:ss");
             DateTime queryTime = DateTime.of(record.getQueryTime(), "yyyy-MM-dd HH:mm:ss");
-            //如果更新时间和查询时间是同一天，则返回图片
-            if(DateUtil.isSameDay(updateTime, queryTime)) {
+            //如果上次查询时间比更新时间晚，则返回图片
+            if (queryTime.isAfter(updateTime)) {
                 return Optional.of(getResult.get());
             }
         }
@@ -261,11 +261,11 @@ public class QueryMessageHandler implements MessageHandler {
         List<ExpData> reverseExpData = ListUtil.reverseNew(expData);
         //经验异常的角色可以尝试重新查询，每天可以重试5次，
         //经验异常：昨日经验为0
-        if (reverseExpData.get(0).expDifference() == 0) {
-            redisUtil.setnx(exceptExpKey(today, characterData.getName().toLowerCase()), 5, Duration.ofDays(1));
-        } else {
-            redisUtil.delete(exceptExpKey(today, characterData.getName().toLowerCase()));
-        }
+//        if (reverseExpData.get(0).expDifference() == 0) {
+//            redisUtil.setnx(exceptExpKey(today, characterData.getName().toLowerCase()), 5, Duration.ofDays(1));
+//        } else {
+//            redisUtil.delete(exceptExpKey(today, characterData.getName().toLowerCase()));
+//        }
 
         double sum7 = reverseExpData.stream()
                 .limit(7)

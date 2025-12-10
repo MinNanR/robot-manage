@@ -925,12 +925,50 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
                         expDifference = expDifference.add(new BigDecimal(fullExp));
                     }
                 }
-                String recordDate = DateTime.of(item.getRecordDate(), "yyyy-MM-dd").toString("M/dd");
-                ExpData expData = new ExpData(recordDate, expDifference.longValue(), levelPercent);
+                DateTime recordDate = DateTime.of(item.getRecordDate(), "yyyy-MM-dd");
+
+                String recordDateStr = recordDate.toString("M/dd");
+                long dayDiffer = DateUtil.betweenDay(recordDate, DateTime.of(nextItem.getRecordDate(), "yyyy-MM-dd"), true);
+                if (dayDiffer > 1) {
+                    double process = expDataList.isEmpty() ? levelPercent : expDataList.get(expDataList.size() - 1).expProcess();
+                    for (int j = 0; j < dayDiffer - 1; j++) {
+                        String fillDate = recordDate.offsetNew(DateField.DAY_OF_YEAR, j).toString("M/dd");
+                        expDataList.add(new ExpData(fillDate, 0L, process));
+                    }
+                    recordDateStr = recordDate.offsetNew(DateField.DAY_OF_YEAR, (int) dayDiffer - 1).toString("M/dd");
+                }
+                ExpData expData = new ExpData(recordDateStr, expDifference.longValue(), levelPercent);
                 expDataList.add(expData);
             }
         }
         characterData.setExpData(expDataList);
+
+
+        int serverClassRank =Integer.parseInt(characterData.getServerClassRank());
+        String nearRankUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=job&id=%s&reboot_index=%s&page_index=%s"
+                .formatted(region, characterData.getJob().replaceAll(" ", "+"), rebootIndex, Math.max(serverClassRank - 2, 1));
+        HttpResponse nearRankRes = HttpUtil.createGet(nearRankUrl).execute();
+        String nearRankResponseJsonString = nearRankRes.body();
+        JSONObject rankObj = JSONUtil.parseObj(nearRankResponseJsonString);
+        JSONArray ranks = rankObj.getJSONArray("ranks");
+        if (!ranks.isEmpty()) {
+            List<CharacterData> nearRanks = ranks.stream().limit(5)
+                    .map(e -> (JSONObject) e)
+                    .map(e -> {
+                        CharacterData nearRank = new CharacterData();
+                        nearRank.setServerClassRank(e.getStr("rank"));
+                        nearRank.setName(e.getStr("characterName"));
+                        nearRank.setLevel(e.getStr("level"));
+                        BigDecimal expRequired = new BigDecimal(lvExpMap.get(e.getInt("level")));
+                        BigDecimal currentExp = new BigDecimal(e.getStr("exp"));
+                        BigDecimal epxPercent = currentExp.divide(expRequired, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
+                        String expPercent = String.valueOf(epxPercent.doubleValue());
+                        nearRank.setExpPercent(expPercent + "%");
+                        return nearRank;
+                    })
+                    .toList();
+            characterData.setNearRank(nearRanks);
+        }
 
         characterRecord.setQueryTime(DateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
         characterRecordRepository.save(characterRecord);
