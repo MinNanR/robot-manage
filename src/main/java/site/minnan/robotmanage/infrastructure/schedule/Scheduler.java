@@ -57,7 +57,11 @@ public class Scheduler {
     @Scheduled(cron = "0 05,20,35,50 * * * *")
     public void detectMaintain() {
         log.info("开始检测官网维护公告");
-        maintainService.detectMaintainV2();
+        try {
+            maintainService.detectMaintainV2();
+        } catch (Exception e) {
+            log.error("检查官网维护公告异常", e);
+        }
         log.info("结束检测官网维护公告");
     }
 
@@ -90,10 +94,14 @@ public class Scheduler {
         jmsService.schedule();
     }
 
-    @Scheduled(cron = "0 0/5 4,5,6 * * *")
+//    @Scheduled(cron = "0 0/5 4,5,6 * * *")
     public void characterExp() {
         log.info("开始查询角色经验数据");
-        characterSupportService.expDailyTask(0);
+        try {
+            characterSupportService.expDailyTask(0);
+        } catch (Exception e) {
+            log.error("查询角色经验数据异常", e);
+        }
         log.info("结束查询角色经验数据");
     }
 }

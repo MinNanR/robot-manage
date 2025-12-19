@@ -8,6 +8,7 @@ import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.ReUtil;
+import cn.hutool.core.util.RuntimeUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
@@ -83,6 +84,10 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
 
     @Value("${query_source:mapleranks}")
     private String source;
+
+    @Value("${query.infoScriptPath}")
+    private String infoScriptPath;
+
     @Autowired
     private CharacterRecordRepository characterRecordRepository;
 
@@ -754,7 +759,7 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         BigDecimal currentExp = new BigDecimal(expRecord.getCurrentExp());
         BigDecimal epxPercent = currentExp.divide(expRequired, 6, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
         String expPercent = String.valueOf(epxPercent.doubleValue());
-        expRecord.setLevePercent(expPercent);
+        expRecord.setLevelPercent(expPercent);
 
         Specification<CharacterExpDaily> spec = (((root, query, builder) -> {
             List<Predicate> list = new ArrayList<>();
@@ -781,41 +786,62 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
 
     @Override
     public Optional<CharacterData> queryCharacterInfoLocal(String queryName, String region) {
-        CharacterRecord characterRecord = characterRecordRepository.getByCharacterNameIgnoreCaseAndRegion(queryName, region);
-
-        if (characterRecord == null) {
+//        CharacterRecord characterRecord = characterRecordRepository.getByCharacterNameIgnoreCaseAndRegion(queryName, region);
+        CharacterData characterData;
+        List<CharacterExpDaily> expRecordList;
+        try {
+            String mysqlJsonString = RuntimeUtil.execForStr("python %s %s %s".formatted(infoScriptPath, queryName, region));
+            if (StrUtil.isBlank(mysqlJsonString)){
+                return Optional.empty();
+            }
+            JSONObject mysqlJson = JSONUtil.parseObj(mysqlJsonString);
+            characterData  = mysqlJson.getBean("character", CharacterData.class);
+            expRecordList = mysqlJson.getBeanList("exp",CharacterExpDaily.class);
+        } catch (Exception e) {
+            log.error("查询角色信息异常", e);
             return Optional.empty();
         }
 
+        if (characterData == null) {
+            return Optional.empty();
+        }
+
+        characterData.setExpPercent(characterData.getExpPercent() + "%");
+        if (characterData.getNearRank() != null) {
+            characterData.getNearRank().forEach(e -> e.setExpPercent(e.getExpPercent() + "%"));
+        }
+
         //处理基础数据
-        CharacterData characterData = new CharacterData();
-        characterData.setName(characterRecord.getCharacterName());
-        characterData.setCharacterImgUrl(characterRecord.getCharacterImgUrl());
-        Integer worldId = characterRecord.getWorldId();
-        characterData.setServer(wordMap.getOrDefault(worldId, ""));
-        characterData.setLevel(characterRecord.getLevel().toString());
-        characterData.setExpPercent(characterRecord.getLevelPercent() + "%");
-        characterData.setSource("minnan.site");
-        characterData.setUpdateTime(characterRecord.getUpdateTime());
+//        CharacterData characterData = new CharacterData();
+//        characterData.setName(characterRecord.getCharacterName());
+//        characterData.setJob(characterRecord.getJobName());
+//        characterData.setCharacterImgUrl(characterRecord.getCharacterImgUrl());
+//        Integer worldId = characterRecord.getWorldId();
+//        characterData.setServer(wordMap.getOrDefault(worldId, ""));
+//        characterData.setLevel(characterRecord.getLevel().toString());
+//        characterData.setExpPercent(characterRecord.getLevelPercent() + "%");
+//        characterData.setSource("minnan.site");
+//        characterData.setUpdateTime(characterRecord.getUpdateTime());
+//        characterData.setQueryTime(characterRecord.getQueryTime());
 
 //        JobMap job = jobMapRepository.getJob(characterRecord.getJobId(), characterRecord.getJobDetail());
 //        characterData.setJob(characterRecord.getJobName());
-        String url = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=overall&id=weekly&reboot_index=0&page_index=1&character_name=%s"
-                .formatted(region, queryName);
-        try {
-            HttpResponse jobResponse = HttpUtil.createGet(url).execute();
-            String jobResponseJsonString = jobResponse.body();
-            JSONObject jobObj = JSONUtil.parseObj(jobResponseJsonString);
-            JSONArray jobData = jobObj.getJSONArray("ranks");
-            if (!jobData.isEmpty()) {
-                JSONObject jobInfo = jobData.getJSONObject(0);
-                characterData.setJob(jobInfo.getStr("jobName"));
-            } else {
-                characterData.setJob("");
-            }
-        } catch (Exception e) {
-            characterData.setJob("");
-        }
+//        String url = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=overall&id=weekly&reboot_index=0&page_index=1&character_name=%s"
+//                .formatted(region, queryName);
+//        try {
+//            HttpResponse jobResponse = HttpUtil.createGet(url).execute();
+//            String jobResponseJsonString = jobResponse.body();
+//            JSONObject jobObj = JSONUtil.parseObj(jobResponseJsonString);
+//            JSONArray jobData = jobObj.getJSONArray("ranks");
+//            if (!jobData.isEmpty()) {
+//                JSONObject jobInfo = jobData.getJSONObject(0);
+//                characterData.setJob(jobInfo.getStr("jobName"));
+//            } else {
+//                characterData.setJob("");
+//            }
+//        } catch (Exception e) {
+//            characterData.setJob("");
+//        }
 
         //处理排名数据
 //        CompletableFuture<CharacterData> rankQuery = CompletableFuture.supplyAsync(() -> {
@@ -829,25 +855,25 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
 //            log.error("外部数据查询异常", e);
 //            characterData.setRankEmpty();
 //        }
-        String rebootIndex = worldId == 45 || worldId == 70 || worldId == 46 ? "1" : "2";
-        String jobServerRankUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=job&reboot_index=%s&page_index=1&character_name=%s"
-                .formatted(region, rebootIndex, queryName);
-        String jobGlobalRankUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=job&reboot_index=0&page_index=1&character_name=%s"
-                .formatted(region, queryName);
-        String levelServerRankUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=overall&id=legendary&reboot_index=1&page_index=%s&character_name=%s"
-                .formatted(region,  rebootIndex, queryName);
-        String levelGlobalRankUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=overall&id=legendary&reboot_index=0&page_index=1&character_name=%s"
-                .formatted(region, queryName);
+//        String rebootIndex = worldId == 45 || worldId == 70 || worldId == 46 ? "1" : "2";
+//        String jobServerRankUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=job&reboot_index=%s&page_index=1&character_name=%s"
+//                .formatted(region, rebootIndex, queryName);
+//        String jobGlobalRankUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=job&reboot_index=0&page_index=1&character_name=%s"
+//                .formatted(region, queryName);
+//        String levelServerRankUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=overall&id=legendary&reboot_index=1&page_index=%s&character_name=%s"
+//                .formatted(region,  rebootIndex, queryName);
+//        String levelGlobalRankUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=overall&id=legendary&reboot_index=0&page_index=1&character_name=%s"
+//                .formatted(region, queryName);
 
-        List<String> rankUrls = List.of(jobServerRankUrl, jobGlobalRankUrl, levelServerRankUrl, levelGlobalRankUrl);
-        List<Consumer<String>> setters = List.of(characterData::setServerClassRank, characterData::setGlobalClassRank, characterData::setServerLevelRank, characterData::setGlobalLevelRank);
-        for (int i = 0; i < rankUrls.size(); i++) {
-            String rankUrl = rankUrls.get(i);
-            Consumer<String> setter = setters.get(i);
-            getCharacterRank(rankUrl, setter);
-        }
+//        List<String> rankUrls = List.of(jobServerRankUrl, jobGlobalRankUrl, levelServerRankUrl, levelGlobalRankUrl);
+//        List<Consumer<String>> setters = List.of(characterData::setServerClassRank, characterData::setGlobalClassRank, characterData::setServerLevelRank, characterData::setGlobalLevelRank);
+//        for (int i = 0; i < rankUrls.size(); i++) {
+//            String rankUrl = rankUrls.get(i);
+//            Consumer<String> setter = setters.get(i);
+//            getCharacterRank(rankUrl, setter);
+//        }
 
-
+        Integer worldId = characterData.getWorldId();
         //处理联盟数据
         String legionUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=legion&id=%d&page_index=1&character_name=%s"
                 .formatted(region, worldId, queryName);
@@ -869,25 +895,25 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
             characterData.setLegionCoinsPerDay(coinsPerDay.toString());
             characterData.setLegionRank(legionInfo.getStr("rank"));
         }
-
-        //处理成就数据
-        String achievementUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=achievement&page_index=1&character_name=%s"
-                .formatted(region, queryName);
-        HttpResponse achievementResponse = HttpUtil.createGet(achievementUrl).execute();
-        String achievementResponseJsonString = achievementResponse.body();
-        JSONObject achievementObj = JSONUtil.parseObj(achievementResponseJsonString);
-        JSONArray achievementRanks = achievementObj.getJSONArray("ranks");
-        if (!achievementRanks.isEmpty()) {
-            JSONObject achievementInfo = achievementRanks.getJSONObject(0);
-            characterData.setAchievementPoints(achievementInfo.getStr("starSum"));
-            characterData.setAchievementRank(achievementInfo.getStr("rank"));
-        }
+//
+//        //处理成就数据
+//        String achievementUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=achievement&page_index=1&character_name=%s"
+//                .formatted(region, queryName);
+//        HttpResponse achievementResponse = HttpUtil.createGet(achievementUrl).execute();
+//        String achievementResponseJsonString = achievementResponse.body();
+//        JSONObject achievementObj = JSONUtil.parseObj(achievementResponseJsonString);
+//        JSONArray achievementRanks = achievementObj.getJSONArray("ranks");
+//        if (!achievementRanks.isEmpty()) {
+//            JSONObject achievementInfo = achievementRanks.getJSONObject(0);
+//            characterData.setAchievementPoints(achievementInfo.getStr("starSum"));
+//            characterData.setAchievementRank(achievementInfo.getStr("rank"));
+//        }
 
         //处理经验数据
         List<LvExp> lvExpList = lvExpRepository.findAll();
         Map<Integer, Long> lvExpMap = lvExpList.stream().collect(Collectors.toMap(LvExp::getLv, e -> e.getExpToNextLevel() == null ? 0L : Long.parseLong(e.getExpToNextLevel())));
         String startDate = DateTime.now().offset(DateField.DAY_OF_YEAR, -15).toString("yyyy-MM-dd");
-        List<CharacterExpDaily> expRecordList = characterExpDailyRepository.findAllByCharacterIdAndRecordDateAfter(characterRecord.getId(), startDate);
+//        List<CharacterExpDaily> expRecordList = characterExpDailyRepository.findAllByCharacterIdAndRecordDateAfter(characterRecord.getId(), startDate);
         expRecordList.sort(Comparator.comparing(CharacterExpDaily::getRecordDate));
         List<ExpData> expDataList = new ArrayList<>();
         if (expRecordList.size() < 15) {
@@ -896,7 +922,7 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
             DateTime firstDate = DateTime.of(d.getRecordDate(), "yyyy-MM-dd");
             int level = Integer.parseInt(d.getLevel());
 //            double process = NumberUtil.div(currentExp, expNeed, 2, RoundingMode.HALF_UP);
-            double levelPercent = level + Double.parseDouble(d.getLevePercent()) / 100;
+            double levelPercent = level + Double.parseDouble(d.getLevelPercent()) / 100;
             for (int i = 0; i < lackDay; i++) {
                 DateTime date = firstDate.offsetNew(DateField.DAY_OF_YEAR, i - lackDay);
                 expDataList.add(new ExpData(date.toString("M/dd"), 0L, levelPercent));
@@ -907,12 +933,12 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
             for (int i = 0; i < expRecordList.size() - 1; i++) {
                 CharacterExpDaily item = expRecordList.get(i);
                 int level1 = Integer.parseInt(item.getLevel());
-//                Double levelPercent = level1 + Double.parseDouble(item.getLevePercent()) / 100;
+//                Double levelPercent = level1 + Double.parseDouble(item.getLevelPercent()) / 100;
                 String currentExp = item.getCurrentExp();
                 CharacterExpDaily nextItem = expRecordList.get(i + 1);
                 String nextExp = nextItem.getCurrentExp();
                 int level2 = Integer.parseInt(nextItem.getLevel());
-                Double levelPercent = level2 + Double.parseDouble(nextItem.getLevePercent()) / 100;
+                Double levelPercent = level2 + Double.parseDouble(nextItem.getLevelPercent()) / 100;
                 BigDecimal expDifference;
                 if (level1 == level2) {
                     expDifference = new BigDecimal(nextExp).subtract(new BigDecimal(currentExp));
@@ -944,34 +970,34 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         characterData.setExpData(expDataList);
 
 
-        int serverClassRank =Integer.parseInt(characterData.getServerClassRank());
-        String nearRankUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=job&id=%s&reboot_index=%s&page_index=%s"
-                .formatted(region, characterData.getJob().replaceAll(" ", "+"), rebootIndex, Math.max(serverClassRank - 2, 1));
-        HttpResponse nearRankRes = HttpUtil.createGet(nearRankUrl).execute();
-        String nearRankResponseJsonString = nearRankRes.body();
-        JSONObject rankObj = JSONUtil.parseObj(nearRankResponseJsonString);
-        JSONArray ranks = rankObj.getJSONArray("ranks");
-        if (!ranks.isEmpty()) {
-            List<CharacterData> nearRanks = ranks.stream().limit(5)
-                    .map(e -> (JSONObject) e)
-                    .map(e -> {
-                        CharacterData nearRank = new CharacterData();
-                        nearRank.setServerClassRank(e.getStr("rank"));
-                        nearRank.setName(e.getStr("characterName"));
-                        nearRank.setLevel(e.getStr("level"));
-                        BigDecimal expRequired = new BigDecimal(lvExpMap.get(e.getInt("level")));
-                        BigDecimal currentExp = new BigDecimal(e.getStr("exp"));
-                        BigDecimal epxPercent = currentExp.divide(expRequired, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
-                        String expPercent = String.valueOf(epxPercent.doubleValue());
-                        nearRank.setExpPercent(expPercent + "%");
-                        return nearRank;
-                    })
-                    .toList();
-            characterData.setNearRank(nearRanks);
-        }
+//        int serverClassRank =Integer.parseInt(characterData.getServerClassRank());
+//        String nearRankUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=job&id=%s&reboot_index=%s&page_index=%s"
+//                .formatted(region, characterData.getJob().replaceAll(" ", "+"), rebootIndex, Math.max(serverClassRank - 2, 1));
+//        HttpResponse nearRankRes = HttpUtil.createGet(nearRankUrl).execute();
+//        String nearRankResponseJsonString = nearRankRes.body();
+//        JSONObject rankObj = JSONUtil.parseObj(nearRankResponseJsonString);
+//        JSONArray ranks = rankObj.getJSONArray("ranks");
+//        if (!ranks.isEmpty()) {
+//            List<CharacterData> nearRanks = ranks.stream().limit(5)
+//                    .map(e -> (JSONObject) e)
+//                    .map(e -> {
+//                        CharacterData nearRank = new CharacterData();
+//                        nearRank.setServerClassRank(e.getStr("rank"));
+//                        nearRank.setName(e.getStr("characterName"));
+//                        nearRank.setLevel(e.getStr("level"));
+//                        BigDecimal expRequired = new BigDecimal(lvExpMap.get(e.getInt("level")));
+//                        BigDecimal currentExp = new BigDecimal(e.getStr("exp"));
+//                        BigDecimal epxPercent = currentExp.divide(expRequired, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100));
+//                        String expPercent = String.valueOf(epxPercent.doubleValue());
+//                        nearRank.setExpPercent(expPercent + "%");
+//                        return nearRank;
+//                    })
+//                    .toList();
+//            characterData.setNearRank(nearRanks);
+//        }
 
-        characterRecord.setQueryTime(DateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
-        characterRecordRepository.save(characterRecord);
+//        characterRecord.setQueryTime(DateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
+//        characterRecordRepository.save(characterRecord);
 
         return Optional.of(characterData);
     }
@@ -1026,7 +1052,7 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         CharacterExpDaily expRecord = new CharacterExpDaily(characterRecord, now.toDateStr(), characterJson);
         expRecord.setCreateTime(time);
 
-        expRecord.setLevePercent(expPercent);
+        expRecord.setLevelPercent(expPercent);
         characterExpDailyRepository.save(expRecord);
     }
 

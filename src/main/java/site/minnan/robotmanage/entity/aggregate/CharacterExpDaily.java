@@ -32,7 +32,7 @@ public class CharacterExpDaily {
     private String level;
 
     @Column(name = "level_percent")
-    private String levePercent;
+    private String levelPercent;
 
     @Column(name = "create_time")
     private String createTime;

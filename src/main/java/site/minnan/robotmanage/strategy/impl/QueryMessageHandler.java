@@ -175,40 +175,28 @@ public class QueryMessageHandler implements MessageHandler {
 
         String server = (String) dto.getPayload().getOrDefault("server", "u");
         String region = "u".equals(server) ? "na" : "eu";
-        CharacterRecord record = characterRecordRepository.getByCharacterNameIgnoreCaseAndRegion(queryTarget, region);
         String pngPath = "%s/%s/%s.png".formatted(folder, today, queryTarget.toLowerCase());
-        if (FileUtil.exist(pngPath)) {
-            DateTime updateTime = DateTime.of(record.getUpdateTime(), "yyyy-MM-dd HH:mm:ss");
-            DateTime queryTime = DateTime.of(record.getQueryTime(), "yyyy-MM-dd HH:mm:ss");
-            //如果上次查询时间比更新时间晚，则返回图片
-            if (queryTime.isAfter(updateTime)) {
-                return Optional.of(getResult.get());
-            }
-        }
+
 
         CharacterData c;
         try {
-//            c = characterSupportService.fetchCharacterInfo(queryTarget, server);
-            if (record == null) {
-                characterSupportService.initCharacter(queryTarget, region);
-            }
             Optional<CharacterData> characterDataOpt = characterSupportService.queryCharacterInfoLocal(queryTarget, region);
             c = characterDataOpt.orElseThrow(() -> new EntityNotFoundException("角色不存在"));
+            if (!c.getQueryTime().isBlank() && FileUtil.exist(pngPath)) {
+                DateTime updateTime = DateTime.of(c.getUpdateTime(), "yyyy-MM-dd HH:mm:ss");
+                DateTime queryTime = DateTime.of(c.getQueryTime(), "yyyy-MM-dd HH:mm:ss");
+                //如果上次查询时间比更新时间晚，则返回图片
+                if (queryTime.isAfter(updateTime)) {
+                    return Optional.of(getResult.get());
+                }
+            }
         } catch (Exception e) {
             log.error("查询角色信息失败，查询目标为" + queryTarget, e);
             return Optional.of("查询失败");
         }
 
         createPic(c);
-        int queryCount = characterSupportService.getQueryCount(queryTarget, dto.getSender().userId());
-        if (queryCount >= 3) {
-//            sb.append("[CQ:image,file=https://minnan.site:2005/rot/20240118/toomuch.jpg,subType=0]");
-            String result = getResult.get();
-            result = result + "[CQ:image,file=https://minnan.site:2005/rot/20240118/toomuch.jpg,subType=0]";
-            return Optional.of(result);
-        } else {
-            return Optional.of(getResult.get());
-        }
+        return Optional.of(getResult.get());
 
 
     }
