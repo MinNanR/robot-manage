@@ -57,7 +57,8 @@ if __name__ == '__main__':
         (SELECT COUNT(*) + 1 AS rank_global
         FROM character_record
         WHERE
-            level > :L
+            region = :region
+            AND level > :L
             OR (level = :L AND level_percent > :P)
             OR (level = :L AND level_percent = :P AND id < :cid)) as r_g,
         (SELECT COUNT(*) + 1 AS rank_world
@@ -71,7 +72,8 @@ if __name__ == '__main__':
         ) as r_w,
         (SELECT COUNT(*) + 1 AS rank_job
         FROM character_record
-        WHERE job_name = :J
+        WHERE :region = :region
+          AND job_name = :J
           AND (
                 level > :L
              OR (level = :L AND level_percent > :P)
@@ -139,7 +141,8 @@ if __name__ == '__main__':
                 "P": character["expPercent"],
                 "cid": int(record_result[0]),
                 "W": world_id,
-                "J": character["job"]
+                "J": character["job"],
+                "region": region
             })
             rank_data = rank_res.fetchone()
             character["globalLevelRank"] = rank_data[0]

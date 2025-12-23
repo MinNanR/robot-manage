@@ -2,6 +2,8 @@ import sys
 
 import requests
 import json
+
+from ratelimit import sleep_and_retry, limits, RateLimitException
 from sqlalchemy import create_engine, text
 import logging
 from datetime import datetime
@@ -89,11 +91,48 @@ def insert_data(data_to_insert: list):
 
     for item in data_to_insert:
         with engine.begin() as conn:
-            # result = conn.execute(record_sql, item)
-            # character_id = result.lastrowid
-            # item["character_id"] = character_id
-            # conn.execute(exp_sql, item)
+            result = conn.execute(record_sql, item)
+            character_id = result.lastrowid
+            item["character_id"] = character_id
+            conn.execute(exp_sql, item)
             logger.info("保存[%s]数据", item["character_name"])
+
+@sleep_and_retry
+@limits(calls=1, period=1)
+def do_query(url, lv_map, region):
+    res = requests.get(url, timeout=30)
+    res_json = json.loads(res.text)
+
+    raw_data = res_json["ranks"]
+
+    data_to_insert = []
+    stop_flag = False
+    for item in raw_data:
+        lv = item["level"]
+        stop_flag = lv < 270
+        if stop_flag:
+            break
+        if lv < 300:
+            exp_need = int(lv_map[lv])
+            current_exp = int(item["exp"])
+            level_percent = (current_exp / exp_need) * 100
+        else:
+            level_percent = 0
+        data_to_insert.append({
+            "character_name": item["characterName"],
+            "current_exp": item["exp"],
+            "region": region,
+            "level": lv,
+            "level_percent": level_percent,
+            "world_id": item["worldID"],
+            "job_name": item["jobName"],
+            "character_img_url": item["characterImgURL"]
+        })
+    try:
+        insert_data(data_to_insert)
+    except Exception as ex:
+        logger.exception("写入数据库异常,%s", ex)
+    return stop_flag
 
 
 def execute_query(base_url, offset, page_size, region):
@@ -101,39 +140,12 @@ def execute_query(base_url, offset, page_size, region):
     page_index = 1
     while page_index <= page_size:
         try:
-            url = base_url.format(offset + page_index)
-            res = requests.get(url, timeout=30)
-            res_json = json.loads(res.text)
-
-            raw_data = res_json["ranks"]
-
-            data_to_insert = []
-            flag = False
-            for item in raw_data:
-                lv = item["level"]
-                flag = lv < 270
-                if flag:
-                    break
-                if lv < 300:
-                    exp_need = int(lv_map[lv])
-                    current_exp = int(item["exp"])
-                    level_percent = (current_exp / exp_need) * 100
-                else:
-                    level_percent = 0
-                data_to_insert.append({
-                    "character_name": item["characterName"],
-                    "current_exp": item["exp"],
-                    "region": region,
-                    "level": lv,
-                    "level_percent": level_percent,
-                    "world_id": item["worldID"],
-                    "job_name": item["jobName"],
-                    "character_img_url": item["characterImgURL"]
-                })
-            insert_data(data_to_insert)
-            if flag:
+            stop_flag = do_query(base_url.format(offset + page_index), lv_map, region)
+            if stop_flag:
                 break
             page_index += 10
+        except RateLimitException as re:
+            raise
         except Exception as ex:
             logger.error("查询出错", ex)
     return 0

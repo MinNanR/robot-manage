@@ -790,7 +790,7 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         CharacterData characterData;
         List<CharacterExpDaily> expRecordList;
         try {
-            String mysqlJsonString = RuntimeUtil.execForStr("python %s %s %s".formatted(infoScriptPath, queryName, region));
+            String mysqlJsonString = RuntimeUtil.execForStr("python3 %s %s %s".formatted(infoScriptPath, queryName, region));
             if (StrUtil.isBlank(mysqlJsonString)){
                 return Optional.empty();
             }
@@ -873,28 +873,28 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
 //            getCharacterRank(rankUrl, setter);
 //        }
 
-        Integer worldId = characterData.getWorldId();
-        //处理联盟数据
-        String legionUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=legion&id=%d&page_index=1&character_name=%s"
-                .formatted(region, worldId, queryName);
-        HttpResponse legionResponse = HttpUtil.createGet(legionUrl).execute();
-        String legionResponseJsonString = legionResponse.body();
-        JSONObject legionObj = JSONUtil.parseObj(legionResponseJsonString);
-        JSONArray legionRanks = legionObj.getJSONArray("ranks");
-        if (!legionRanks.isEmpty()) {
-            JSONObject legionInfo = legionRanks.getJSONObject(0);
-
-            characterData.setLegionLevel(legionInfo.getStr("legionLevel"));
-            characterData.setLegionPower(legionInfo.getStr("legionPower"));
-            characterData.setLegionPower(legionInfo.getStr("raidPower"));
-            BigDecimal legionPower = new BigDecimal(legionInfo.getStr("raidPower"));
-            BigDecimal coinsPerDay = legionPower
-                    .multiply(BigDecimal.valueOf(60 * 60 * 24))
-                    .divide(BigDecimal.valueOf(100_000_000_000L))
-                    .divide(new BigDecimal("1.08"), 2, RoundingMode.HALF_UP);
-            characterData.setLegionCoinsPerDay(coinsPerDay.toString());
-            characterData.setLegionRank(legionInfo.getStr("rank"));
-        }
+//        Integer worldId = characterData.getWorldId();
+//        //处理联盟数据
+//        String legionUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=legion&id=%d&page_index=1&character_name=%s"
+//                .formatted(region, worldId, queryName);
+//        HttpResponse legionResponse = HttpUtil.createGet(legionUrl).execute();
+//        String legionResponseJsonString = legionResponse.body();
+//        JSONObject legionObj = JSONUtil.parseObj(legionResponseJsonString);
+//        JSONArray legionRanks = legionObj.getJSONArray("ranks");
+//        if (!legionRanks.isEmpty()) {
+//            JSONObject legionInfo = legionRanks.getJSONObject(0);
+//
+//            characterData.setLegionLevel(legionInfo.getStr("legionLevel"));
+//            characterData.setLegionPower(legionInfo.getStr("legionPower"));
+//            characterData.setLegionPower(legionInfo.getStr("raidPower"));
+//            BigDecimal legionPower = new BigDecimal(legionInfo.getStr("raidPower"));
+//            BigDecimal coinsPerDay = legionPower
+//                    .multiply(BigDecimal.valueOf(60 * 60 * 24))
+//                    .divide(BigDecimal.valueOf(100_000_000_000L))
+//                    .divide(new BigDecimal("1.08"), 2, RoundingMode.HALF_UP);
+//            characterData.setLegionCoinsPerDay(coinsPerDay.toString());
+//            characterData.setLegionRank(legionInfo.getStr("rank"));
+//        }
 //
 //        //处理成就数据
 //        String achievementUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=achievement&page_index=1&character_name=%s"
