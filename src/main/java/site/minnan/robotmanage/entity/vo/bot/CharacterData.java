@@ -76,6 +76,10 @@ public class CharacterData {
 
     private String queryTime;
 
+    private Long currentExp;
+
+    private Long expNeed;
+
     /**
      * 无排名信息时，使用默认排名信息
      */
@@ -93,7 +97,28 @@ public class CharacterData {
         this.globalLevelRank = data.getGlobalLevelRank();
     }
 
+
+    private String formatNumber(long number) {
+        if (number < 1_000_000) {
+            return Long.toString(number);
+        } else if (number < 1_000_000_000) {
+            return "%.2fM".formatted((float) number / 1_000_000);
+        } else if (number < 1_000_000_000_000L) {
+            return "%.2fB".formatted((float) number / 1_000_000_000);
+        }
+        return "%.2fT".formatted((float) number / 1_000_000_000_000L);
+    }
+
     public String parseLegionPower() {
-        return "%.2fM".formatted((float) Integer.parseInt(legionPower) / 1000000);
+        long legionPower = Long.parseLong(this.legionPower);
+        return formatNumber(legionPower);
+    }
+
+    public String getCurrentExpString() {
+        return formatNumber(currentExp);
+    }
+
+    public String getExpNeedString() {
+        return formatNumber(expNeed);
     }
 }

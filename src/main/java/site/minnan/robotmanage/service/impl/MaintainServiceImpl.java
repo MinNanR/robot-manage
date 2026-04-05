@@ -203,6 +203,10 @@ public class MaintainServiceImpl implements MaintainService {
 
         Document contentDoc = Jsoup.parse(contentText);
         Elements children = contentDoc.body().children();
+        //2026年3月2日，公告结构修改
+        if (children.hasClass("cms-ms")) {
+            children = children.select(".cms-ms").get(0).children();
+        }
         //定位维护时间的html元素，内容为Time的下一个元素就是维护时间
         int timeElementIndex = 0;
         for (Element child : children) {

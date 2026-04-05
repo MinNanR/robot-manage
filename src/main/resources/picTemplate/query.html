@@ -57,6 +57,7 @@
             <img th:src="${img}" style="width: 70%"/>
             <div>
                 <div th:text="'Lv.' + ${c.getLevel()} + '(' + ${c.getExpPercent()} + ')'"></div>
+                <div th:text="'(' + ${c.getCurrentExpString()} + '/' + ${c.getExpNeedString()} + ')'"></div>
                 <div th:text="${c.getJob()}"></div>
                 <div th:text="${c.getServer()}"></div>
             </div>
