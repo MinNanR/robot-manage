@@ -1,88 +1,85 @@
 package site.minnan.robotmanage.entity.aggregate;
 
 import cn.hutool.core.util.NumberUtil;
+import cn.hutool.core.util.StrUtil;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Data
 @Entity
-@Table(name = "boss")
+@Table(name = "boss_info", indexes = {
+        @Index(name = "uk_boss_name", columnList = "boss_name", unique = true)
+})
 public class Boss {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    /**
-     * boss昵称
-     */
-    @Column(name = "boss_nick_name")
-    private String bossNickName;
-
-    /**
-     * 血量
-     */
+    /** 血量 */
     private String hp;
 
-    /**
-     * 等级
-     */
+    /** 等级 */
     private String level;
 
-    /**
-     * 物理防御力
-     */
+    /** 物理防御力 */
     @Column(name = "physical_defense")
     private Integer physicalDefense;
 
-    /**
-     * 魔法防御力
-     */
+    /** 魔法防御力 */
     @Column(name = "magical_defense")
     private Integer magicalDefense;
 
-    /**
-     * 元素抗性，0-无，1-有
-     */
+    /** 元素减伤，0-无，1-有 */
     @Column(name = "element_reduction")
     private Integer elementReduction;
 
-    /**
-     * arc要求
-     */
+    /** arc要求 */
     private String arc;
 
-    /**
-     * aut要求
-     */
+    /** aut要求 */
     private String aut;
 
-    /**
-     * 重新进入间隔
-     */
+    /** 重新进入间隔 */
     @Column(name = "reenter_interval")
     private String reenterInterval;
 
-    /**
-     * 奖励次数
-     */
+    /** 领取限制 */
     @Column(name = "claim_limit")
     private String claimLimit;
 
-    /**
-     * 蛋钱
-     */
+    /** 奖励 */
     private Long reward;
 
-    /**
-     * boss名称
-     */
-    @Column(name = "boss_name")
+    /** boss名称（唯一） */
+    @Column(name = "boss_name", nullable = false, unique = true)
     private String bossName;
+
+    @OneToMany(mappedBy = "boss", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<BossNickname> nicknames = new ArrayList<>();
+
+    public void setNicknames(List<BossNickname> nicknames) {
+        this.nicknames.clear();
+        if (nicknames != null) {
+            nicknames.forEach(this::addNickname);
+        }
+    }
+
+    public void addNickname(BossNickname nickname) {
+        if (nickname != null) {
+            nickname.setBoss(this);
+            this.nicknames.add(nickname);
+        }
+    }
 
     public String toMsg() {
         StringBuilder sb = new StringBuilder();
 
+        int pd = physicalDefense == null ? 0 : physicalDefense;
+        int md = magicalDefense == null ? 0 : magicalDefense;
         String base = """
                 BOSS：%s
                 血量：%s
@@ -90,18 +87,18 @@ public class Boss {
                 物理防御力：%d
                 魔法防御力：%d
                 元素抗性：%s
-                入场间隔：%s
                 通关限制：%s
                 """;
-        String baseString = base.formatted(bossName, hp, level, physicalDefense, magicalDefense, elementReduction == 1 ? "有" : "无",
-                reenterInterval == null ? "无" : reenterInterval, claimLimit);
+        String baseString = base.formatted(bossName, hp, level, pd, md,
+                elementReduction != null && elementReduction == 1 ? "有" : "无",
+                claimLimit == null ? "无" : claimLimit);
 
         sb.append(baseString);
-        if (arc != null) {
-            sb.append("神秘要求：").append(arc).append("\n");
+        if (StrUtil.isNotBlank(arc)) {
+            sb.append("ARC要求：").append(arc).append("\n");
         }
-        if (aut != null) {
-            sb.append("真实之力要求：").append(aut).append("\n");
+        if (StrUtil.isNotBlank(aut)) {
+            sb.append("AUT要求：").append(aut).append("\n");
         }
         sb.append("蛋钱：");
         if (reward == null) {
