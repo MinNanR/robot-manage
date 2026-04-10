@@ -210,118 +210,8 @@ public class QueryMessageHandler implements MessageHandler {
         DateTime now = DateTime.now();
         String today = now.offset(DateField.HOUR, -8).toString("yyyyMMdd");
 
-        ClassLoaderTemplateResolver templateResolver = new ClassLoaderTemplateResolver();
-        templateResolver.setSuffix(".html");
-        templateResolver.setTemplateMode(TemplateMode.HTML);
-        TemplateEngine templateEngine = new TemplateEngine();
-        templateEngine.setTemplateResolver(templateResolver);
-
-        Context context = new Context();
-        context.setVariable("c", characterData);
-
-        String characterImgUrl = characterData.getCharacterImgUrl();
-        //下载角色证件照，直接用浏览器启动不能使用代理，先下载然后转base64可以快一点
-        if (StrUtil.isNotBlank(characterImgUrl)) {
-            HttpResponse imgRequest = HttpUtil.createGet(characterImgUrl).setProxy(proxy).execute();
-            String imgBase64 = Base64.encode(imgRequest.bodyStream());
-            context.setVariable("img", "data:image/png;base64,%s".formatted(imgBase64));
-        }
-
-        List<ExpData> expData = characterData.getExpData();
-        //截取最后14天经验数据
-        expData = ListUtil.sub(expData, expData.size() - 14, expData.size());
-        List<String> dateList = expData.stream().map(e -> e.dateLabel()).toList();
-        BigDecimal billionNumber = BigDecimal.valueOf(billion);
-        List<Double> expList = expData.stream()
-                .map(e -> BigDecimal.valueOf(e.expDifference()))
-//                .map(e -> NumberUtil.round(e / billion, 4))
-                .map(e -> e.divide(billionNumber, 4, RoundingMode.HALF_UP))
-                .map(e -> e.doubleValue())
-                .toList();
-        List<Double> processList = expData.stream()
-                .map(e -> e.expProcess())
-                .toList();
-        JSONObject jsonObject = new JSONObject();
-        jsonObject.set("noteDate", dateList)
-                .set("exp", expList)
-                .set("process", processList);
-
-        List<ExpData> reverseExpData = ListUtil.reverseNew(expData);
-        //经验异常的角色可以尝试重新查询，每天可以重试5次，
-        //经验异常：昨日经验为0
-//        if (reverseExpData.get(0).expDifference() == 0) {
-//            redisUtil.setnx(exceptExpKey(today, characterData.getName().toLowerCase()), 5, Duration.ofDays(1));
-//        } else {
-//            redisUtil.delete(exceptExpKey(today, characterData.getName().toLowerCase()));
-//        }
-
-        double sum7 = reverseExpData.stream()
-                .limit(7)
-                .mapToDouble(e -> (double) e.expDifference() / billion)
-                .sum();
-        context.setVariable("sum7", "%.4fb".formatted(sum7));
-        context.setVariable("avg7", "%.4fb".formatted(BigDecimal.valueOf(sum7).divide(BigDecimal.valueOf(7), 4, RoundingMode.HALF_UP).doubleValue()));
-
-        double sum14 = reverseExpData.stream()
-                .limit(14)
-                .mapToDouble(e -> (double) e.expDifference() / billion)
-                .sum();
-
-        context.setVariable("sum14", "%.4fb".formatted(sum14));
-        context.setVariable("avg14", "%.4fb".formatted(BigDecimal.valueOf(sum14).divide(BigDecimal.valueOf(14), 4, RoundingMode.HALF_UP).doubleValue()));
-
-        List<List<ExpData>> expDataSplit = ListUtil.split(expData, 5);
-        //拆分成三栏进行展示
-        context.setVariable("exp1", expDataSplit.get(0));
-        context.setVariable("exp2", expDataSplit.get(1));
-        context.setVariable("exp3", expDataSplit.get(2));
-
-        //经验预测
-        PageRequest page = PageRequest.of(0, 10);
-        int lv = Integer.parseInt(characterData.getLevel());
-        List<LvExp> stageList = lvExpRepository.findByLvGreaterThanEqual(lv, page);
-        if (stageList.isEmpty() || sum7 == 0) {
-            context.setVariable("levelPredicate", Collections.emptyList());
-        } else {
-            //计算7日均经验
-            double avg7 = BigDecimal.valueOf(sum7).divide(BigDecimal.valueOf(7), 4, RoundingMode.HALF_UP).doubleValue() * billion;
-            Iterator<LvExp> itr = stageList.iterator();
-            LvExp currentStage = itr.next();
-            //当前等级经验百分比
-            double expPercent = Double.parseDouble(characterData.getExpPercent().replace("%", ""));
-            //当前等级升级经验
-            long expToNextLevel = Long.parseLong(currentStage.getExpToNextLevel());
-            //当前刷了多少经验
-            long currentExp = (long) (expToNextLevel * (expPercent / 100));
-            //需要多少经验升级
-            long expNeed = expToNextLevel - currentExp;
-            //这一级还需要刷多少天升级
-            int dayNeed = NumberUtil.round(expNeed / avg7, 0).intValue();
-            ReckonLevel reckonItem = new ReckonLevel(lv + 1, now.offsetNew(DateField.DAY_OF_YEAR, dayNeed).toDateStr());
-            ArrayList<ReckonLevel> reckonList = ListUtil.toList(reckonItem);
-
-            while (itr.hasNext()) {
-                LvExp lvInfo = itr.next();
-                lv = lvInfo.getLv() + 1;
-                //等级大于300结束预测
-                if (lv > 300) {
-                    break;
-                }
-                expNeed = Long.parseLong(lvInfo.getExpToNextLevel());
-                dayNeed = dayNeed + (int) (expNeed / avg7);
-                reckonItem = new ReckonLevel(lv, now.offsetNew(DateField.DAY_OF_YEAR, dayNeed).toDateStr());
-                //大于10年的结束预测
-                if (dayNeed > 365 * 10) {
-                    break;
-                }
-                reckonList.add(reckonItem);
-            }
-            context.setVariable("levelPredicate", reckonList);
-        }
-
-        context.setVariable("expDataString", jsonObject);
         //使用模板引擎，生成html代码
-        String html = templateEngine.process("picTemplate/query", context);
+        String html = characterSupportService.createCharacterHtml(characterData);
 
 
         String folderPath = "%s/%s".formatted(folder, today);
@@ -339,8 +229,7 @@ public class QueryMessageHandler implements MessageHandler {
         RuntimeUtil.execForStr("python3 %s %s %s".formatted(pythonPath, htmlPath, pngPath));
     }
 
-    private record ReckonLevel(int lv, String dateLabel) {
-    }
+
 
     private static final String TASK_SAVE_KEY = "taskSave";
 

@@ -1,7 +1,6 @@
 package site.minnan.robotmanage.service;
 
 import jakarta.persistence.EntityNotFoundException;
-import site.minnan.robotmanage.entity.aggregate.CharacterRecord;
 import site.minnan.robotmanage.entity.aggregate.Nick;
 import site.minnan.robotmanage.entity.aggregate.QueryMap;
 import site.minnan.robotmanage.entity.dto.GetNickListDTO;
@@ -104,4 +103,7 @@ public interface CharacterSupportService {
      * @param region
      */
     void initCharacter(String queryName, String region);
+
+    String createCharacterHtml(CharacterData characterData);
+
 }

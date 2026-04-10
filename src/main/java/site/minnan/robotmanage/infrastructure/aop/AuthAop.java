@@ -65,7 +65,10 @@ public class AuthAop {
     @Pointcut("execution(public * site.minnan.robotmanage.controller.JmsController..*(..))")
     public void jms(){}
 
-    @Around("web() && !auth() && !bot() && !jms()")
+    @Pointcut("execution(public * site.minnan.robotmanage.controller.ViewController..*(..))")
+    public void view() {}
+
+    @Around("web() && !auth() && !bot() && !jms() && !view()")
     public Object filter(ProceedingJoinPoint proceedingJoinPoint) throws Throwable {
         ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         HttpServletRequest request = requestAttributes.getRequest();

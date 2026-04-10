@@ -80,6 +80,8 @@ public class CharacterData {
 
     private Long expNeed;
 
+    private Long avgExp7;
+
     /**
      * 无排名信息时，使用默认排名信息
      */
@@ -115,10 +117,39 @@ public class CharacterData {
     }
 
     public String getCurrentExpString() {
+        if (currentExp == null) {
+            return "";
+        }
         return formatNumber(currentExp);
     }
 
     public String getExpNeedString() {
+        if (expNeed == null) {
+            return "";
+        }
         return formatNumber(expNeed);
+    }
+
+    public String getAvgExp7String () {
+        if (avgExp7 == null) {
+            return "";
+        }
+        return formatNumber(avgExp7);
+    }
+
+    public String differExp(CharacterData another) {
+        Long anotherCurrentExp = another.getCurrentExp();
+        if (anotherCurrentExp == null) {
+            return "";
+        }
+        long diff = anotherCurrentExp - currentExp;
+        if (diff == 0) {
+            return "-";
+        }
+        if (diff > 0) {
+            return "+" + formatNumber(diff);
+        } else {
+            return "-" + formatNumber(-diff);
+        }
     }
 }

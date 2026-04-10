@@ -2,13 +2,13 @@ package site.minnan.robotmanage.service.impl;
 
 import cn.hutool.core.codec.Base64;
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.convert.NumberChineseFormatter;
 import cn.hutool.core.date.DateField;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.ReUtil;
-import cn.hutool.core.util.RuntimeUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
@@ -31,6 +31,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
+import org.thymeleaf.templatemode.TemplateMode;
+import org.thymeleaf.templateresolver.ClassLoaderTemplateResolver;
 import site.minnan.robotmanage.entity.aggregate.*;
 import site.minnan.robotmanage.entity.dao.*;
 import site.minnan.robotmanage.entity.dto.GetNickListDTO;
@@ -42,14 +47,17 @@ import site.minnan.robotmanage.entity.vo.bot.ExpData;
 import site.minnan.robotmanage.infrastructure.exception.EntityAlreadyExistException;
 import site.minnan.robotmanage.infrastructure.exception.EntityNotExistException;
 import site.minnan.robotmanage.infrastructure.utils.RedisUtil;
+import site.minnan.robotmanage.mysql.dao.CharacterExpDailyMysqlRepository;
+import site.minnan.robotmanage.mysql.dao.CharacterRecordMysqlRepository;
+import site.minnan.robotmanage.mysql.entity.CharacterExpDailyMysql;
+import site.minnan.robotmanage.mysql.entity.CharacterRecordMysql;
 import site.minnan.robotmanage.service.CharacterSupportService;
+import site.minnan.robotmanage.strategy.impl.QueryMessageHandler;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.net.Proxy;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneId;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.function.Consumer;
@@ -85,8 +93,13 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
     @Value("${query_source:mapleranks}")
     private String source;
 
-    @Value("${query.infoScriptPath}")
-    private String infoScriptPath;
+    private static final Integer billion = 1000000000;
+
+    @Autowired
+    private CharacterRecordMysqlRepository characterRecordMysqlRepository;
+
+    @Autowired
+    private CharacterExpDailyMysqlRepository characterExpDailyMysqlRepository;
 
     @Autowired
     private CharacterRecordRepository characterRecordRepository;
@@ -715,6 +728,7 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
 
     }
 
+    @Deprecated
     public void fetchCharacterExp(CharacterRecord character) {
         String characterName = character.getCharacterName();
         String region = character.getRegion();
@@ -785,18 +799,116 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
     }
 
     @Override
+    @Transactional(value = "mysqlTransactionManager")
     public Optional<CharacterData> queryCharacterInfoLocal(String queryName, String region) {
 //        CharacterRecord characterRecord = characterRecordRepository.getByCharacterNameIgnoreCaseAndRegion(queryName, region);
+        DateTime now = DateTime.now();
         CharacterData characterData;
-        List<CharacterExpDaily> expRecordList;
+        CharacterRecordMysql record;
+        List<LvExp> lvExpList = lvExpRepository.findAll();
+        Map<Integer, Long> lvExpMap = lvExpList.stream().collect(Collectors.toMap(LvExp::getLv, e -> e.getExpToNextLevel() == null ? 0L : Long.parseLong(e.getExpToNextLevel())));
+
         try {
-            String mysqlJsonString = RuntimeUtil.execForStr("python3 %s %s %s".formatted(infoScriptPath, queryName, region));
-            if (StrUtil.isBlank(mysqlJsonString)){
+            Optional<CharacterRecordMysql> recordOpt = characterRecordMysqlRepository
+                    .findFirstByCharacterNameIgnoreCaseAndRegion(queryName.toLowerCase(), region);
+            if (recordOpt.isEmpty()) {
                 return Optional.empty();
             }
-            JSONObject mysqlJson = JSONUtil.parseObj(mysqlJsonString);
-            characterData  = mysqlJson.getBean("character", CharacterData.class);
-            expRecordList = mysqlJson.getBeanList("exp",CharacterExpDaily.class);
+
+            record = recordOpt.get();
+            characterData = new CharacterData();
+            characterData.setName(record.getCharacterName());
+            characterData.setCharacterImgUrl(record.getCharacterImgUrl());
+            characterData.setJob(record.getJobName());
+            Integer worldId = record.getWorldId();
+            characterData.setWorldId(worldId);
+            characterData.setServer(wordMap.getOrDefault(worldId, String.valueOf(worldId)));
+            characterData.setLevel(record.getLevel() == null ? null : record.getLevel().toString());
+            if (record.getLevelPercent() != null) {
+                characterData.setExpPercent(record.getLevelPercent().stripTrailingZeros().toPlainString());
+            }
+            if (record.getUpdateTime() != null) {
+                characterData.setUpdateTime(DateTime.of(record.getUpdateTime()).toString("yyyy-MM-dd HH:mm:ss"));
+            }
+            if (record.getQueryTime() != null) {
+                characterData.setQueryTime(DateTime.of(record.getQueryTime()).toString("yyyy-MM-dd HH:mm:ss"));
+            }
+            characterData.setSource("minnan.site");
+
+            if (record.getLegion() != null && record.getLegion() > 0) {
+                characterData.setLegionLevel(record.getLegion().toString());
+                if (record.getLegionRank() != null) {
+                    characterData.setLegionRank(record.getLegionRank().toString());
+                }
+                if (record.getLegionRaidPower() != null) {
+                    characterData.setLegionPower(record.getLegionRaidPower().toString());
+                }
+            }
+
+            CharacterRecordMysqlRepository.RankProjection rankData = characterRecordMysqlRepository.calcRank(
+                    record.getLevel(),
+                    record.getLevelPercent(),
+                    record.getId(),
+                    record.getWorldId(),
+                    record.getJobName(),
+                    region
+            );
+            if (rankData != null) {
+                characterData.setGlobalLevelRank(rankData.getRankGlobal().toString());
+                characterData.setServerLevelRank(rankData.getRankWorld().toString());
+                characterData.setGlobalClassRank(rankData.getRankJob().toString());
+                characterData.setServerClassRank(rankData.getRankWorldJob().toString());
+            } else {
+                characterData.setRankEmpty();
+            }
+
+            if (characterData.getServerClassRank() != null) {
+                Integer rn = Integer.parseInt(characterData.getServerClassRank());
+                List<CharacterRecordMysqlRepository.NearRankProjection> nearRankData =
+                        characterRecordMysqlRepository.findNearRank(record.getWorldId(), record.getJobName(), rn);
+                List<Integer> nearRankCharacterIdList = nearRankData.stream().map(e -> e.getId()).toList();
+
+
+                LocalDate endTime = DateUtil.toLocalDateTime(now).toLocalDate();
+                LocalDate startTime = DateUtil.toLocalDateTime(DateUtil.offsetDay(now, -8)).toLocalDate();
+                List<CharacterExpDailyMysql> nearRankExpData = characterExpDailyMysqlRepository.findByIdCharacterIdInAndIdRecordDateBetween(nearRankCharacterIdList,
+                        startTime, endTime);
+                Map<Integer, List<CharacterExpDailyMysql>> nearRankExpMap = nearRankExpData.stream().collect(Collectors.groupingBy(
+                        e -> e.getId().getCharacterId(),
+                        Collectors.toList()
+                ));
+
+                List<CharacterData> nearRankList = nearRankData.stream()
+                        .map(r -> {
+                            CharacterData item = new CharacterData();
+                            Integer id = r.getId();
+                            item.setName(r.getCharacterName());
+                            Integer level = r.getLevel();
+                            BigDecimal levelPercent = r.getLevelPercent();
+                            item.setLevel(level.toString());
+                            item.setServerClassRank(r.getRn().toString());
+                            if (nearRankExpMap.containsKey(id)) {
+                                List<CharacterExpDailyMysql> expRecordList = nearRankExpMap.get(id);
+                                List<ExpData> expData = toExpData(expRecordList, lvExpMap);
+                                double avgExp = expData.stream().limit(7)
+                                        .mapToLong(ExpData::expDifference)
+                                        .average()
+                                        .orElse(0);
+                                item.setAvgExp7((long) avgExp);
+                                CharacterExpDailyMysql lastDayExp = expRecordList.get(expRecordList.size() - 1);
+                                item.setCurrentExp(lastDayExp.getCurrentExp());
+                                Long expNeed = lvExpMap.get(lastDayExp.getLevel());
+                                item.setExpNeed(expNeed);
+                                item.setExpPercent(lastDayExp.getLevelPercent() + "%");
+                            }
+                            return item;
+                        })
+                        .toList();
+
+                characterData.setNearRank(nearRankList);
+            }
+
+            characterRecordMysqlRepository.updateQueryTime(record.getId());
         } catch (Exception e) {
             log.error("查询角色信息异常", e);
             return Optional.empty();
@@ -806,95 +918,10 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
             return Optional.empty();
         }
 
-        characterData.setExpPercent(characterData.getExpPercent() + "%");
-        if (characterData.getNearRank() != null) {
-            characterData.getNearRank().forEach(e -> e.setExpPercent(e.getExpPercent() + "%"));
+        if (characterData.getExpPercent() != null) {
+            characterData.setExpPercent(characterData.getExpPercent() + "%");
         }
 
-        //处理基础数据
-//        CharacterData characterData = new CharacterData();
-//        characterData.setName(characterRecord.getCharacterName());
-//        characterData.setJob(characterRecord.getJobName());
-//        characterData.setCharacterImgUrl(characterRecord.getCharacterImgUrl());
-//        Integer worldId = characterRecord.getWorldId();
-//        characterData.setServer(wordMap.getOrDefault(worldId, ""));
-//        characterData.setLevel(characterRecord.getLevel().toString());
-//        characterData.setExpPercent(characterRecord.getLevelPercent() + "%");
-//        characterData.setSource("minnan.site");
-//        characterData.setUpdateTime(characterRecord.getUpdateTime());
-//        characterData.setQueryTime(characterRecord.getQueryTime());
-
-//        JobMap job = jobMapRepository.getJob(characterRecord.getJobId(), characterRecord.getJobDetail());
-//        characterData.setJob(characterRecord.getJobName());
-//        String url = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=overall&id=weekly&reboot_index=0&page_index=1&character_name=%s"
-//                .formatted(region, queryName);
-//        try {
-//            HttpResponse jobResponse = HttpUtil.createGet(url).execute();
-//            String jobResponseJsonString = jobResponse.body();
-//            JSONObject jobObj = JSONUtil.parseObj(jobResponseJsonString);
-//            JSONArray jobData = jobObj.getJSONArray("ranks");
-//            if (!jobData.isEmpty()) {
-//                JSONObject jobInfo = jobData.getJSONObject(0);
-//                characterData.setJob(jobInfo.getStr("jobName"));
-//            } else {
-//                characterData.setJob("");
-//            }
-//        } catch (Exception e) {
-//            characterData.setJob("");
-//        }
-
-        //处理排名数据
-//        CompletableFuture<CharacterData> rankQuery = CompletableFuture.supplyAsync(() -> {
-//            String server = "na".equals(region) ? "u" : "eu";
-//            return fetchCharacterInfo(queryName, server);
-//        });
-//        try {
-//            CharacterData outsideData = rankQuery.get(10, TimeUnit.SECONDS);
-//            characterData.setRank(outsideData);
-//        } catch (ExecutionException | InterruptedException | TimeoutException e) {
-//            log.error("外部数据查询异常", e);
-//            characterData.setRankEmpty();
-//        }
-//        String rebootIndex = worldId == 45 || worldId == 70 || worldId == 46 ? "1" : "2";
-//        String jobServerRankUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=job&reboot_index=%s&page_index=1&character_name=%s"
-//                .formatted(region, rebootIndex, queryName);
-//        String jobGlobalRankUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=job&reboot_index=0&page_index=1&character_name=%s"
-//                .formatted(region, queryName);
-//        String levelServerRankUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=overall&id=legendary&reboot_index=1&page_index=%s&character_name=%s"
-//                .formatted(region,  rebootIndex, queryName);
-//        String levelGlobalRankUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=overall&id=legendary&reboot_index=0&page_index=1&character_name=%s"
-//                .formatted(region, queryName);
-
-//        List<String> rankUrls = List.of(jobServerRankUrl, jobGlobalRankUrl, levelServerRankUrl, levelGlobalRankUrl);
-//        List<Consumer<String>> setters = List.of(characterData::setServerClassRank, characterData::setGlobalClassRank, characterData::setServerLevelRank, characterData::setGlobalLevelRank);
-//        for (int i = 0; i < rankUrls.size(); i++) {
-//            String rankUrl = rankUrls.get(i);
-//            Consumer<String> setter = setters.get(i);
-//            getCharacterRank(rankUrl, setter);
-//        }
-
-//        Integer worldId = characterData.getWorldId();
-//        //处理联盟数据
-//        String legionUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=legion&id=%d&page_index=1&character_name=%s"
-//                .formatted(region, worldId, queryName);
-//        HttpResponse legionResponse = HttpUtil.createGet(legionUrl).execute();
-//        String legionResponseJsonString = legionResponse.body();
-//        JSONObject legionObj = JSONUtil.parseObj(legionResponseJsonString);
-//        JSONArray legionRanks = legionObj.getJSONArray("ranks");
-//        if (!legionRanks.isEmpty()) {
-//            JSONObject legionInfo = legionRanks.getJSONObject(0);
-//
-//            characterData.setLegionLevel(legionInfo.getStr("legionLevel"));
-//            characterData.setLegionPower(legionInfo.getStr("legionPower"));
-//            characterData.setLegionPower(legionInfo.getStr("raidPower"));
-//            BigDecimal legionPower = new BigDecimal(legionInfo.getStr("raidPower"));
-//            BigDecimal coinsPerDay = legionPower
-//                    .multiply(BigDecimal.valueOf(60 * 60 * 24))
-//                    .divide(BigDecimal.valueOf(100_000_000_000L))
-//                    .divide(new BigDecimal("1.08"), 2, RoundingMode.HALF_UP);
-//            characterData.setLegionCoinsPerDay(coinsPerDay.toString());
-//            characterData.setLegionRank(legionInfo.getStr("rank"));
-//        }
         if (characterData.getLegionLevel() != null) {
             BigDecimal legionPower = new BigDecimal(characterData.getLegionPower());
             BigDecimal coinsPerDay = legionPower
@@ -903,34 +930,153 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
                     .divide(new BigDecimal("1.08"), 2, RoundingMode.HALF_UP);
             characterData.setLegionCoinsPerDay(coinsPerDay.toString());
         }
-//
-//        //处理成就数据
-//        String achievementUrl = "https://www.nexon.com/api/maplestory/no-auth/ranking/v2/%s?type=achievement&page_index=1&character_name=%s"
-//                .formatted(region, queryName);
-//        HttpResponse achievementResponse = HttpUtil.createGet(achievementUrl).execute();
-//        String achievementResponseJsonString = achievementResponse.body();
-//        JSONObject achievementObj = JSONUtil.parseObj(achievementResponseJsonString);
-//        JSONArray achievementRanks = achievementObj.getJSONArray("ranks");
-//        if (!achievementRanks.isEmpty()) {
-//            JSONObject achievementInfo = achievementRanks.getJSONObject(0);
-//            characterData.setAchievementPoints(achievementInfo.getStr("starSum"));
-//            characterData.setAchievementRank(achievementInfo.getStr("rank"));
-//        }
 
         //处理经验数据
-        List<LvExp> lvExpList = lvExpRepository.findAll();
-        Map<Integer, Long> lvExpMap = lvExpList.stream().collect(Collectors.toMap(LvExp::getLv, e -> e.getExpToNextLevel() == null ? 0L : Long.parseLong(e.getExpToNextLevel())));
+        List<CharacterExpDailyMysql> expRecordList =
+                characterExpDailyMysqlRepository.findRecentByCharacterId(record.getId());
+        if (expRecordList == null || expRecordList.isEmpty()) {
+            characterData.setExpData(Collections.emptyList());
+            return Optional.of(characterData);
+        }
+
         String startDate = DateTime.now().offset(DateField.DAY_OF_YEAR, -15).toString("yyyy-MM-dd");
 //        List<CharacterExpDaily> expRecordList = characterExpDailyRepository.findAllByCharacterIdAndRecordDateAfter(characterRecord.getId(), startDate);
-        expRecordList.sort(Comparator.comparing(CharacterExpDaily::getRecordDate));
+
+        List<ExpData> expDataList = toExpData(expRecordList, lvExpMap);
+        characterData.setExpData(expDataList);
+
+        CharacterExpDailyMysql lastDayExp = expRecordList.get(expRecordList.size() - 1);
+        characterData.setCurrentExp(lastDayExp.getCurrentExp());
+        Long expNeed = lvExpMap.get(lastDayExp.getLevel());
+        characterData.setExpNeed(expNeed);
+
+        return Optional.of(characterData);
+    }
+
+    @Override
+    public String createCharacterHtml(CharacterData characterData) {
+        DateTime now = DateTime.now();
+
+        Context context = new Context();
+        context.setVariable("c", characterData);
+
+        String characterImgUrl = characterData.getCharacterImgUrl();
+        //下载角色证件照，直接用浏览器启动不能使用代理，先下载然后转base64可以快一点
+        if (StrUtil.isNotBlank(characterImgUrl)) {
+            HttpResponse imgRequest = HttpUtil.createGet(characterImgUrl).setProxy(proxy).execute();
+            String imgBase64 = Base64.encode(imgRequest.bodyStream());
+            context.setVariable("img", "data:image/png;base64,%s".formatted(imgBase64));
+        }
+
+        List<ExpData> expData = characterData.getExpData();
+        //截取最后14天经验数据
+        expData = ListUtil.sub(expData, expData.size() - 14, expData.size());
+        List<String> dateList = expData.stream().map(e -> e.dateLabel()).toList();
+        BigDecimal billionNumber = BigDecimal.valueOf(billion);
+        List<Double> expList = expData.stream()
+                .map(e -> BigDecimal.valueOf(e.expDifference()))
+//                .map(e -> NumberUtil.round(e / billion, 4))
+                .map(e -> e.divide(billionNumber, 4, RoundingMode.HALF_UP))
+                .map(e -> e.doubleValue())
+                .toList();
+        List<Double> processList = expData.stream()
+                .map(e -> e.expProcess())
+                .toList();
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.set("noteDate", dateList)
+                .set("exp", expList)
+                .set("process", processList);
+
+        List<ExpData> reverseExpData = ListUtil.reverseNew(expData);
+
+        double sum7 = reverseExpData.stream()
+                .limit(7)
+                .mapToDouble(e -> (double) e.expDifference() / billion)
+                .sum();
+        context.setVariable("sum7", "%.4fb".formatted(sum7));
+        context.setVariable("avg7", "%.4fb".formatted(BigDecimal.valueOf(sum7).divide(BigDecimal.valueOf(7), 4, RoundingMode.HALF_UP).doubleValue()));
+
+        double sum14 = reverseExpData.stream()
+                .limit(14)
+                .mapToDouble(e -> (double) e.expDifference() / billion)
+                .sum();
+
+        context.setVariable("sum14", "%.4fb".formatted(sum14));
+        context.setVariable("avg14", "%.4fb".formatted(BigDecimal.valueOf(sum14).divide(BigDecimal.valueOf(14), 4, RoundingMode.HALF_UP).doubleValue()));
+
+        List<List<ExpData>> expDataSplit = ListUtil.split(expData, 5);
+        //拆分成三栏进行展示
+        context.setVariable("exp1", expDataSplit.get(0));
+        context.setVariable("exp2", expDataSplit.get(1));
+        context.setVariable("exp3", expDataSplit.get(2));
+
+        //经验预测
+        PageRequest page = PageRequest.of(0, 10);
+        int lv = Integer.parseInt(characterData.getLevel());
+        List<LvExp> stageList = lvExpRepository.findByLvGreaterThanEqual(lv, page);
+        if (stageList.isEmpty() || sum7 == 0) {
+            context.setVariable("levelPredicate", Collections.emptyList());
+        } else {
+            //计算7日均经验
+            double avg7 = BigDecimal.valueOf(sum7).divide(BigDecimal.valueOf(7), 4, RoundingMode.HALF_UP).doubleValue() * billion;
+            Iterator<LvExp> itr = stageList.iterator();
+            LvExp currentStage = itr.next();
+            //当前等级经验百分比
+            double expPercent = Double.parseDouble(characterData.getExpPercent().replace("%", ""));
+            //当前等级升级经验
+            long expToNextLevel = Long.parseLong(currentStage.getExpToNextLevel());
+            //当前刷了多少经验
+            long currentExp = (long) (expToNextLevel * (expPercent / 100));
+            //需要多少经验升级
+            long expNeed = expToNextLevel - currentExp;
+            //这一级还需要刷多少天升级
+            int dayNeed = NumberUtil.round(expNeed / avg7, 0).intValue();
+            ReckonLevel reckonItem = new ReckonLevel(lv + 1, now.offsetNew(DateField.DAY_OF_YEAR, dayNeed).toDateStr());
+            ArrayList<ReckonLevel> reckonList = ListUtil.toList(reckonItem);
+
+            while (itr.hasNext()) {
+                LvExp lvInfo = itr.next();
+                lv = lvInfo.getLv() + 1;
+                //等级大于300结束预测
+                if (lv > 300) {
+                    break;
+                }
+                expNeed = Long.parseLong(lvInfo.getExpToNextLevel());
+                dayNeed = dayNeed + (int) (expNeed / avg7);
+                reckonItem = new ReckonLevel(lv, now.offsetNew(DateField.DAY_OF_YEAR, dayNeed).toDateStr());
+                //大于10年的结束预测
+                if (dayNeed > 365 * 10) {
+                    break;
+                }
+                reckonList.add(reckonItem);
+            }
+            context.setVariable("levelPredicate", reckonList);
+        }
+
+        context.setVariable("expDataString", jsonObject);
+
+        ClassLoaderTemplateResolver templateResolver = new ClassLoaderTemplateResolver();
+        templateResolver.setSuffix(".html");
+        templateResolver.setTemplateMode(TemplateMode.HTML);
+        TemplateEngine templateEngine = new TemplateEngine();
+        templateEngine.setTemplateResolver(templateResolver);
+        String html = templateEngine.process("picTemplate/query", context);
+
+        return html;
+    }
+
+    private record ReckonLevel(int lv, String dateLabel) {
+    }
+
+    private List<ExpData> toExpData(List<CharacterExpDailyMysql> expRecordList, Map<Integer, Long> lvExpMap) {
+        expRecordList.sort(Comparator.comparing(e -> e.getId().getRecordDate()));
         List<ExpData> expDataList = new ArrayList<>();
         if (expRecordList.size() < 15) {
             int lackDay = 15 - expRecordList.size();
-            CharacterExpDaily d = expRecordList.get(0);
-            DateTime firstDate = DateTime.of(d.getRecordDate(), "yyyy-MM-dd");
-            int level = Integer.parseInt(d.getLevel());
-//            double process = NumberUtil.div(currentExp, expNeed, 2, RoundingMode.HALF_UP);
-            double levelPercent = level + Double.parseDouble(d.getLevelPercent()) / 100;
+            CharacterExpDailyMysql d = expRecordList.get(0);
+            DateTime firstDate = DateTime.of(d.getId().getRecordDate().toString(), "yyyy-MM-dd");
+            int level = d.getLevel();
+            double levelPercent = level + d.getLevelPercent().doubleValue() / 100;
             for (int i = 0; i < lackDay; i++) {
                 DateTime date = firstDate.offsetNew(DateField.DAY_OF_YEAR, i - lackDay);
                 expDataList.add(new ExpData(date.toString("M/dd"), 0L, levelPercent));
@@ -939,30 +1085,30 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
 
         if (expRecordList.size() > 1) {
             for (int i = 0; i < expRecordList.size() - 1; i++) {
-                CharacterExpDaily item = expRecordList.get(i);
-                int level1 = Integer.parseInt(item.getLevel());
+                CharacterExpDailyMysql item = expRecordList.get(i);
+                int level1 = item.getLevel();
 //                Double levelPercent = level1 + Double.parseDouble(item.getLevelPercent()) / 100;
-                String currentExp = item.getCurrentExp();
-                CharacterExpDaily nextItem = expRecordList.get(i + 1);
-                String nextExp = nextItem.getCurrentExp();
-                int level2 = Integer.parseInt(nextItem.getLevel());
-                Double levelPercent = level2 + Double.parseDouble(nextItem.getLevelPercent()) / 100;
+                Long currentExp = item.getCurrentExp();
+                CharacterExpDailyMysql nextItem = expRecordList.get(i + 1);
+                Long nextExp = nextItem.getCurrentExp();
+                int level2 = nextItem.getLevel();
+                Double levelPercent = level2 + nextItem.getLevelPercent().doubleValue() / 100;
                 BigDecimal expDifference;
                 if (level1 == level2) {
-                    expDifference = new BigDecimal(nextExp).subtract(new BigDecimal(currentExp));
+                    expDifference = BigDecimal.valueOf(nextExp).subtract(BigDecimal.valueOf(currentExp));
                 } else {
                     //升级的情况
                     Long fullExp = lvExpMap.get(level1);
-                    expDifference = new BigDecimal(fullExp).subtract(new BigDecimal(currentExp)).add(new BigDecimal(nextExp));
+                    expDifference = BigDecimal.valueOf(fullExp).subtract(BigDecimal.valueOf(currentExp)).add(BigDecimal.valueOf(nextExp));
                     while (++level1 < level2) {
                         fullExp = lvExpMap.get(level1);
-                        expDifference = expDifference.add(new BigDecimal(fullExp));
+                        expDifference = expDifference.add(BigDecimal.valueOf(fullExp));
                     }
                 }
-                DateTime recordDate = DateTime.of(item.getRecordDate(), "yyyy-MM-dd");
+                DateTime recordDate = DateTime.of(item.getId().getRecordDate().toString(), "yyyy-MM-dd");
 
                 String recordDateStr = recordDate.toString("M/dd");
-                long dayDiffer = DateUtil.betweenDay(recordDate, DateTime.of(nextItem.getRecordDate(), "yyyy-MM-dd"), true);
+                long dayDiffer = DateUtil.betweenDay(recordDate, DateTime.of(nextItem.getId().getRecordDate().toString(), "yyyy-MM-dd"), true);
                 if (dayDiffer > 1) {
                     double process = expDataList.isEmpty() ? levelPercent : expDataList.get(expDataList.size() - 1).expProcess();
                     for (int j = 0; j < dayDiffer - 1; j++) {
@@ -975,15 +1121,10 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
                 expDataList.add(expData);
             }
         }
-        characterData.setExpData(expDataList);
 
-        CharacterExpDaily lastDayExp = expRecordList.get(expRecordList.size() - 1);
-        characterData.setCurrentExp(Long.parseLong(lastDayExp.getCurrentExp()));
-        Long expNeed = lvExpMap.get(Integer.parseInt(lastDayExp.getLevel()));
-        characterData.setExpNeed(expNeed);
-
-        return Optional.of(characterData);
+        return expDataList;
     }
+
 
 
     /**
