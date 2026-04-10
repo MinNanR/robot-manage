@@ -6,13 +6,13 @@ spring:
   web:
     resources:
       static-locations: classpath:/vendor
-  datasource:
-    url: jdbc:sqlite:/home/minnan/robot-manage/robotData/robot.db
-    driver-class-name: org.sqlite.JDBC
+#  datasource:
+#    url: jdbc:sqlite:/home/minnan/robot-manage/robotData/robot.db
+#    driver-class-name: org.sqlite.JDBC
   jpa:
     hibernate:
       ddl-auto: none
-    database-platform: org.hibernate.community.dialect.SQLiteDialect
+#    database-platform: org.hibernate.community.dialect.SQLiteDialect
     show-sql: true
   data:
     redis:
@@ -55,6 +55,17 @@ query:
   baseUrl: http://minnan.site/robotData/queryPic
   pythonPath: /home/minnan/robot-manage/create_pic.py
   infoScriptPath: /home/minnan/robot-manage/py_script/get_character_info.py
+
+app:
+  datasource:
+    sqlite:
+      url: jdbc:sqlite:/home/minnan/robot-manage/robotData/robot.db
+      driver-class-name: org.sqlite.JDBC
+    mysql:
+      url: jdbc:mysql://127.0.0.1:3306/robot?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+      username: Minnan
+      password: minnan
+      driver-class-name: com.mysql.cj.jdbc.Driver
 
 groups: 931437070, 667082876, 653202241, 836656073, 348273823, 122820573
 manager: 978312456

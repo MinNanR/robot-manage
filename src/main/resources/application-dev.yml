@@ -6,13 +6,9 @@ spring:
   web:
     resources:
       static-locations: classpath:/vendor
-  datasource:
-    url: jdbc:sqlite:F:/Minnan/robot-manage/robot.db
-    driver-class-name: org.sqlite.JDBC
   jpa:
     hibernate:
       ddl-auto: none
-    database-platform: org.hibernate.community.dialect.SQLiteDialect
     show-sql: true
   data:
     redis:
@@ -39,7 +35,8 @@ logging:
   file:
     name: ./logs/robot-manage.log
     max-history: 30
-
+  level:
+    sql: debug
 
 
 aliyun:
@@ -49,14 +46,27 @@ aliyun:
   utilityFolder: utility
 
 query:
-  folder: /home/minnan/robot-manage/robotData/queryPic
+  folder: F:\Minnan\robot-manage\pic
   baseUrl: http://minnan.site/robotData/queryPic
-  pythonPath: /home/minnan/robot-manage/create_pic.py
+  pythonPath: F:\Minnan\robot-manage\src\main\resources\picTemplate\create_pic.py
+  infoScriptPath: F:\Minnan\robot-manage\src\main\resources\picTemplate\get_character_info.py
 
-groups: 931437070, 667082876
+app:
+  datasource:
+    sqlite:
+      url: jdbc:sqlite:F:/Minnan/robot-manage/robot.db
+      driver-class-name: org.sqlite.JDBC
+    mysql:
+      url: jdbc:mysql://minnan.site:3306/robot?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+      username: Minnan
+      password: minnan
+      driver-class-name: com.mysql.cj.jdbc.Driver
+
+groups: 931437070, 667082876, 653202241, 836656073
 manager: 978312456
 sendMessageUrl: http://lynn.badeling.site/msg/sendLynnMsg
 proxyUrlPrefix: http://minnan.site:2017
 schedulerEnable: false
 #game_version: dreamer
-query_source: mapleranks
+query_source: gg
+enableProxy: false
