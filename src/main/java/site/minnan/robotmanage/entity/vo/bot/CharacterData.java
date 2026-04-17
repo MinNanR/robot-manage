@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * 角色信息查询结果
@@ -16,6 +17,8 @@ public class CharacterData {
 
     //角色图片
     private String characterImgUrl;
+
+    private String characterImgBase64;
 
     //角色名称
     private String name;
@@ -68,6 +71,8 @@ public class CharacterData {
     //排名附近的人
     private List<CharacterData> nearRank;
 
+    private List<CharacterData> tagList;
+
     private Integer worldId;
 
     private String source;
@@ -81,6 +86,10 @@ public class CharacterData {
     private Long expNeed;
 
     private Long avgExp7;
+
+    private Long lastDayExp;
+
+    private String expDifferDesc;
 
     /**
      * 无排名信息时，使用默认排名信息
@@ -137,12 +146,16 @@ public class CharacterData {
         return formatNumber(avgExp7);
     }
 
-    public String differExp(CharacterData another) {
-        Long anotherCurrentExp = another.getCurrentExp();
-        if (anotherCurrentExp == null) {
+    public String differExp(CharacterData another, Function<CharacterData, Long> getExp) {
+        if (another == null) {
             return "";
         }
-        long diff = anotherCurrentExp - currentExp;
+        Long exp = getExp.apply(this);
+        Long anotherExp = getExp.apply(another);
+        if (anotherExp == null) {
+            return "";
+        }
+        long diff = anotherExp - exp;
         if (diff == 0) {
             return "-";
         }
@@ -151,5 +164,12 @@ public class CharacterData {
         } else {
             return "-" + formatNumber(-diff);
         }
+    }
+
+    public String getLastDayExpString() {
+        if (lastDayExp == null) {
+            return "";
+        }
+        return formatNumber(lastDayExp);
     }
 }

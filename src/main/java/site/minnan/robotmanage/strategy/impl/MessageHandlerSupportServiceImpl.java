@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Service;
 import site.minnan.robotmanage.entity.aggregate.Auth;
 import site.minnan.robotmanage.entity.aggregate.HandlerStrategy;
@@ -20,6 +21,8 @@ import site.minnan.robotmanage.strategy.MessageHandlerSupportService;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * 消息处理器判定服务
@@ -92,13 +95,13 @@ public class MessageHandlerSupportServiceImpl implements MessageHandlerSupportSe
                     continue;
                 }
                 log.info("消息[{}]全匹配命中处理策略[{}]", messageId, strategy.getStrategyName());
-                statisticsService.refer(strategy);
+//                statisticsService.refer(strategy);
                 return applicationContext.getBean(componentName, MessageHandler.class);
             } else if (expressionType == 2 && ReUtil.isMatch(expression, rawMessage)) {
                 if ((authMask != 0) && (auth & authMask) == 0) {
                     continue;
                 }
-                statisticsService.refer(strategy);
+//                statisticsService.refer(strategy);
                 log.info("消息[{}]正则命中处理策略[{}]", messageId, strategy.getStrategyName());
                 return applicationContext.getBean(componentName, MessageHandler.class);
             }
@@ -108,6 +111,13 @@ public class MessageHandlerSupportServiceImpl implements MessageHandlerSupportSe
     }
 
 
+    public static void main(String[] args) {
+
+        String expression = "^(tag|untag)[:：].+";
+        String rawMessage = "untag:MinnanLum";
+
+        System.out.println(ReUtil.isMatch(expression, rawMessage));
+    }
 //    @PostConstruct
 //    public void initStrategy() throws IOException, ClassNotFoundException {
 //        PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();

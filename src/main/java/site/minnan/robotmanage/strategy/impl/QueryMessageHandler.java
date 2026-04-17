@@ -6,6 +6,7 @@ import cn.hutool.core.date.DateField;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.RuntimeUtil;
@@ -173,16 +174,18 @@ public class QueryMessageHandler implements MessageHandler {
             return "[CQ:image,file=%s,subType=0]".formatted(url);
         };
 
-        String server = (String) dto.getPayload().getOrDefault("server", "u");
+        Map<String, Object> payload = dto.getPayload();
+        String server = MapUtil.getStr(payload, "server", "u");
+        boolean personalQuery = "我".equals(queryContent) | MapUtil.getBool(payload, "personalQuery", false);
         String region = "u".equals(server) ? "na" : "eu";
         String pngPath = "%s/%s/%s.png".formatted(folder, today, queryTarget.toLowerCase());
 
 
         CharacterData c;
         try {
-            Optional<CharacterData> characterDataOpt = characterSupportService.queryCharacterInfoLocal(queryTarget, region);
+            Optional<CharacterData> characterDataOpt = characterSupportService.queryCharacterInfoLocal(queryTarget, region, userId);
             c = characterDataOpt.orElseThrow(() -> new EntityNotFoundException("角色不存在"));
-            if (!c.getQueryTime().isBlank() && FileUtil.exist(pngPath)) {
+            if (!personalQuery && StrUtil.isNotBlank(c.getQueryTime()) && FileUtil.exist(pngPath)) {
                 DateTime updateTime = DateTime.of(c.getUpdateTime(), "yyyy-MM-dd HH:mm:ss");
                 DateTime queryTime = DateTime.of(c.getQueryTime(), "yyyy-MM-dd HH:mm:ss");
                 //如果上次查询时间比更新时间晚，则返回图片
@@ -195,9 +198,14 @@ public class QueryMessageHandler implements MessageHandler {
             return Optional.of("查询失败");
         }
 
-        createPic(c);
-        return Optional.of(getResult.get());
-
+        if (personalQuery) {
+            createPersonalPic(c, userId);
+            String url = "%s/%s/user/%s.png".formatted(baseUrl, today, userId);
+            return Optional.of("[CQ:image,file=%s,subType=0]".formatted(url));
+        } else {
+            createPic(c);
+            return Optional.of(getResult.get());
+        }
 
     }
 
@@ -211,7 +219,7 @@ public class QueryMessageHandler implements MessageHandler {
         String today = now.offset(DateField.HOUR, -8).toString("yyyyMMdd");
 
         //使用模板引擎，生成html代码
-        String html = characterSupportService.createCharacterHtml(characterData);
+        String html = characterSupportService.createCharacterHtml(characterData, "picTemplate/query");
 
 
         String folderPath = "%s/%s".formatted(folder, today);
@@ -229,6 +237,28 @@ public class QueryMessageHandler implements MessageHandler {
         RuntimeUtil.execForStr("python3 %s %s %s".formatted(pythonPath, htmlPath, pngPath));
     }
 
+    private void createPersonalPic(CharacterData characterData, String userId) {
+        DateTime now = DateTime.now();
+        String today = now.offset(DateField.HOUR, -8).toString("yyyyMMdd");
+
+        //使用模板引擎，生成html代码
+        String html = characterSupportService.createCharacterHtml(characterData, "picTemplate/query2");
+
+
+        String folderPath = "%s/%s".formatted(folder, today);
+        File folderFile = new File(folderPath);
+        if (!folderFile.exists()) {
+            folderFile.mkdirs();
+        }
+        //html文件路径
+        String htmlPath = "%s/%s/user/%s.html".formatted(folder, today, userId);
+        //png图片文件路径
+        String pngPath = "%s/%s/user/%s.png".formatted(folder, today, userId);
+        //将html代码写入文件
+        FileUtil.writeString(html, htmlPath, Charset.defaultCharset());
+        //调用python代码，使用无头浏览器渲染html代码后截图
+        RuntimeUtil.execForStr("python3 %s %s %s".formatted(pythonPath, htmlPath, pngPath));
+    }
 
 
     private static final String TASK_SAVE_KEY = "taskSave";

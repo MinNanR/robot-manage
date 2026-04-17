@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<meta charset="utf-8" />
+<link href="http://minnan.site/resource/pure-min.css" rel="stylesheet"/>
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <style>
+        .head-box {
+            background-color: #292929;
+            /*border: solid black;*/
+            color: #f3f3f3;;
+        }
+
+        .content-box {
+            background-color: #222222;
+            color: #f3f3f3;;
+        }
+
+        .flex-box {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+        }
+
+        .flex-box-vertical {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .padding-20 {
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+
+        .padding-10 {
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+
+        .rank-box {
+            /*background-color: #313131;*/
+            margin-top: 5px;
+            padding-left: 10px;
+            padding-right: 10px;
+            padding-top: 3px;
+            padding-bottom: 3px;
+        }
+
+        .level-predicate-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            column-gap: 12px;
+            row-gap: 4px;
+        }
+
+    </style>
+    <script src="http://minnan.site/resource/echarts.js"></script>
+</head>
+<body style="background-color:#3b3b3b;">
+<!--<body>-->
+<div class="pure-g" id="main">
+    <div class="pure-u-4-24" style="padding: 10px 10px 10px 20px">
+        <div style="margin-top: 5px;text-align: center;vertical-align: middle;line-height: 30px" class="head-box">
+            <span th:text="${c.getName()}">CoderMinnan</span>
+        </div>
+        <div style="margin-top:5px;text-align: center;vertical-align: middle;line-height: 30px;padding-top: 10px;padding-bottom: 10px"
+             class="content-box">
+            <img th:src="${img}" style="width: 70%"/>
+            <div>
+                <div th:text="'Lv.' + ${c.getLevel()} + '(' + ${c.getExpPercent()} + ')'"></div>
+                <div th:text="'(' + ${c.getCurrentExpString()} + '/' + ${c.getExpNeedString()} + ')'"></div>
+                <div th:text="${c.getJob()}"></div>
+                <div th:text="${c.getServer()}"></div>
+            </div>
+            <div class="flex-box padding-20">
+                <div>区职业排名</div>
+                <div th:text="${c.getServerClassRank()}">-</div>
+            </div>
+            <div class="flex-box padding-20">
+                <div>服务器职业排名</div>
+                <div th:text="${c.getGlobalClassRank()}">-</div>
+            </div>
+            <div class="flex-box padding-20">
+                <div>区总排名</div>
+                <div th:text="${c.getServerLevelRank()}">-</div>
+            </div>
+            <div class="flex-box padding-20">
+                <div>服务器总排名</div>
+                <div th:text="${c.getGlobalLevelRank()}">-</div>
+            </div>
+        </div>
+        <div style="margin-top: 5px;text-align: center;vertical-align: middle;line-height: 30px" class="head-box">
+            <span>联盟</span>
+        </div>
+        <div th:if="${c.getLegionLevel() != null}" style="margin-top:5px;text-align: center;vertical-align: middle;line-height: 30px;padding-top: 10px;padding-bottom: 10px"
+             class="content-box">
+            <div class="flex-box padding-20">
+                <div>联盟等级</div>
+                <div th:text="${c.getLegionLevel()}">-</div>
+            </div>
+            <div class="flex-box padding-20">
+                <div>联盟战斗力</div>
+                <div th:text="${c.parseLegionPower()}">-</div>
+            </div>
+            <div class="flex-box padding-20">
+                <div>联盟排名</div>
+                <div th:text="${c.getLegionRank()}"></div>
+            </div>
+            <div class="flex-box padding-20">
+                <div>每日联盟币</div>
+                <div th:text="${c.getLegionCoinsPerDay()}"></div>
+            </div>
+            <div th:if="${c.getAchievementPoints() != null}" class="flex-box padding-20">
+                <div>成就值</div>
+                <div th:text="${c.getAchievementPoints()}"></div>
+            </div>
+        </div>
+
+    </div>
+    <div class="pure-u-12-24" style="padding: 10px 10px 10px 5px">
+        <div style="margin-top: 5px;text-align: center;vertical-align: middle;line-height: 30px" class="head-box">
+            <span>每日经验获取</span>
+        </div>
+        <div style="margin-top: 5px">
+            <!--            <img src="exp.png" style="width: 100%;height: 290px;">-->
+            <div id="exp" style="width: 100%;height: 320px;" class="content-box">
+
+            </div>
+        </div>
+        <div style="display: flex;flex-direction: row; margin-top: 5px;">
+            <div class="content-box" style="width: 49%;padding-top: 10px;padding-bottom: 10px;">
+                <div class="flex-box padding-20">
+                    <div>7日总经验</div>
+                    <div th:text="${sum7}">0b</div>
+                </div>
+                <div class="flex-box padding-20">
+                    <div>7日日均经验</div>
+                    <div th:text="${avg7}"></div>
+                </div>
+            </div>
+            <div class="content-box" style="width: 50%;margin-left: 5px;padding-top: 10px;padding-bottom: 10px;">
+                <div class="flex-box padding-20">
+                    <div>14日总经验</div>
+                    <div th:text="${sum14}">0b</div>
+                </div>
+                <div class="flex-box padding-20">
+                    <div>14日日均经验</div>
+                    <div th:text="${avg14}"></div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex;flex-direction: row;margin-top: 5px;">
+            <div class="flex-box-vertical" style="width: 24%;margin-right: 5px;">
+                <div style="margin-top: 5px;text-align: center;vertical-align: middle;line-height: 30px" class="head-box">
+                    <span>详细每日经验获取</span>
+                </div>
+                <div class="content-box" style="margin-top: 5px;padding-top: 10px;padding-bottom: 10px;text-align: center;">
+                    <div class="flex-box padding-20"  th:each="expItem: ${exp}" style="line-height: 1.5">
+                        <div th:text="${expItem.dateLabel() + ':'}"></div>
+                        <div th:text="${expItem.formatExpDifference()}"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-box-vertical" style="width: 24%;margin-left: 5px;margin-right: 5px;">
+                <div style="margin-top: 5px;text-align: center;vertical-align: middle;line-height: 30px" class="head-box">
+                    <span>升级日程预测</span>
+                </div>
+                <div class="content-box" style="margin-top: 5px;padding-top: 10px;padding-bottom: 10px;text-align: center;">
+                    <div class="rank-box"
+                         th:each="p:${levelPredicate}" th:text="${p.lv()} + ':' + ${p.dateLabel()}"></div>
+                </div>
+            </div>
+            <div class="flex-box-vertical" style="width: 50%">
+                <div style="margin-top: 5px;text-align: center;vertical-align: middle;line-height: 30px" class="head-box">
+                    <span>附近职业排名</span>
+                </div>
+                <div class="content-box" style="margin-top: 5px;padding-top: 10px;padding-bottom: 10px;text-align: center;">
+                    <div th:each="n :${c.nearRank}" class="flex-box padding-20 rank-box">
+                        <div th:text="${n.getServerClassRank()} + '.' + ${n.getName()}"></div>
+                        <div th:text="'Lv.' + ${n.getLevel()} + '(' + ${n.getExpPercent()} + ')'"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="pure-u-6-24" style="padding: 10px 10px 10px 5px">
+        <div style="margin-top: 5px;text-align: center;vertical-align: middle;line-height: 30px" class="head-box">
+            <span>特别关注</span>
+        </div>
+        <div class="content-box" style="margin-top:10px;padding-top: 5px;padding-bottom: 10px;text-align: center;">
+            <div th:each="t :${c.tagList}" class="flex-box" style="justify-content: start;margin-top: 10px;background-color: #313131;">
+                <div style="width: 40%">
+                    <img th:src="${t.characterImgBase64}" style="width: 70%"/>
+                </div>
+                <div class="flex-box-vertical" style="text-align: left;padding-top: 5px;padding-bottom: 5px;font-size: 14px;">
+                    <div style="line-height: 1.3" class="flex-box" th:text="${t.name}"></div>
+                    <div style="line-height: 1.3" class="flex-box" th:text="'Lv.' + ${t.getLevel()} + '(' + ${t.getExpPercent()} + ')'"></div>
+                    <div style="line-height: 1.3" class="flex-box" th:text="'昨日' + ${t.lastDayExpString}"></div>
+                    <div style="line-height: 1.3" class="flex-box" th:text="'日均' + ${t.avgExp7String}"></div>
+                    <div style="line-height: 1.3" class="flex-box" th:text="${t.expDifferDesc}"></div>
+                </div>
+            </div>
+        </div>
+<!--        <div class="content-box"-->
+<!--             style="padding-top: 20px;padding-bottom: 10px;text-align: center;margin-top: 5px;">-->
+<!--            <div class="level-predicate-grid">-->
+<!--                <div style="line-height: 1.5" th:each="p:${levelPredicate}" th:text="${p.lv()} + ':' + ${p.dateLabel()}"></div>-->
+<!--            </div>-->
+<!--        </div>-->
+    </div>
+    <div class="pure-u-6-24 head-box" style="text-align: center;margin-bottom: 10px;">Created By: CoderMinnan</div>
+    <div class="pure-u-6-24 head-box" style="text-align: center;margin-bottom: 10px;">Designed By: Citrvs</div>
+    <div class="pure-u-6-24 head-box" style="text-align: center;margin-bottom: 10px;" th:text="'data from: ' + ${c.source}"></div>
+    <div class="pure-u-6-24 head-box" style="text-align: center;margin-bottom: 10px;" th:text="'last updated : ' + ${c.updateTime}"></div>
+</div>
+</body>
+<script th:inline="javascript" type="text/javascript">
+    // 基于准备好的dom，初始化echarts实例
+    var myChart = echarts.init(document.getElementById('exp'));
+    var data = [[${expDataString}]]
+
+    let option = {
+        tooltip: {
+            trigger: "axis",
+            axisPointer: {
+                animation: false,
+                type: "cross",
+                lineStyle: {
+                    color: "#376df4",
+                    width: 2,
+                    opacity: 1,
+                },
+            },
+        },
+        xAxis: {
+            type: "category",
+            data: data.noteDate,
+            axisLine: {lineStyle: {color: "#8392A5"}},
+        },
+        yAxis: [
+            {
+                scale: true,
+                axisLine: {lineStyle: {color: "#8392A5"}, show: true},
+                splitLine: {show: false},
+                type: "value",
+                show: true,
+            },
+            {
+                scale: true,
+                // axisLine: {lineStyle: {color: "#8392A5"}, show: true},
+                splitLine: {show: false},
+                type: "value",
+                show: true,
+            }
+        ],
+        grid: {
+            x: 80,
+            x2: 50,
+            bottom: 80,
+        },
+        series: [
+            {
+                type: "bar",
+                //                name: "经验",
+                data: data.exp,
+                smooth: data.smooth,
+                showSymbol: true,
+                lineStyle: {
+                    width: 1,
+                },
+                yAxisIndex: 0,
+                label: {
+                    show: false,
+                    position: 'top',
+                    fontWeight: "bold",
+                    fontSize: 16
+                },
+                itemStyle: {
+                    //color: "#709ce9"
+                    color: (params => {
+                        if(params.value > 7000) {
+                            return "#FF0000"
+                        } else if (params.value > 5000) {
+                            return "#f3b334"
+                        } else {
+                            return "#709ce9"
+                        }
+                    })
+                },
+                animation: false
+            },
+            {
+                type: "line",
+                //                name: "经验",
+                data: data.process,
+                smooth: data.smooth,
+                showSymbol: true,
+                lineStyle: {
+                    width: 1,
+                },
+                yAxisIndex: 1,
+                label: {
+                    show: false,
+                    position: 'top',
+                    fontWeight: "bold",
+                    fontSize: 16
+                },
+                itemStyle: {
+                    color: "#FFFFFF"
+                },
+                animation: false
+            }
+        ],
+        // color: ["#c87183", "#8ae7e3", "#0000ff", "#D2691E"],
+    };
+
+    // 使用刚指定的配置项和数据显示图表。
+    myChart.setOption(option);
+
+</script>
+</html>
