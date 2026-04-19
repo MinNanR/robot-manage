@@ -52,6 +52,7 @@ aliyun:
 
 query:
   folder: /home/minnan/robot-manage/robotData/queryPic
+  imageFolder: /home/minnan/robot-manage/robotData/character_pic
   baseUrl: http://minnan.site/robotData/queryPic
   pythonPath: /home/minnan/robot-manage/create_pic.py
   infoScriptPath: /home/minnan/robot-manage/py_script/get_character_info.py

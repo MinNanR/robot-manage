@@ -94,7 +94,7 @@ public interface CharacterSupportService {
      */
     void expDailyTask(int pageIndex);
 
-    Optional<CharacterData> queryCharacterInfoLocal(String queryName, String region);
+    Optional<CharacterData> queryCharacterInfoLocal(String queryName, String region, String userId);
 
     /**
      * 初始化角色信息
@@ -104,6 +104,5 @@ public interface CharacterSupportService {
      */
     void initCharacter(String queryName, String region);
 
-    String createCharacterHtml(CharacterData characterData);
-
+    String createCharacterHtml(CharacterData characterData, String template);
 }

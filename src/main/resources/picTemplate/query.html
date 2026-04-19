@@ -23,11 +23,6 @@
             justify-content: space-between;
         }
 
-        .flex-box-vertical {
-            display: flex;
-            flex-direction: column;
-        }
-
         .padding-20 {
             padding-left: 20px;
             padding-right: 20px;
@@ -40,18 +35,11 @@
 
         .rank-box {
             background-color: #313131;
-            margin-top: 5px;
+            margin-top: 10px;
             padding-left: 10px;
             padding-right: 10px;
-            padding-top: 3px;
-            padding-bottom: 3px;
-        }
-
-        .level-predicate-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            column-gap: 12px;
-            row-gap: 4px;
+            padding-top: 5px;
+            padding-bottom: 5px;
         }
 
     </style>
@@ -182,19 +170,9 @@
         </div>
         <div style="margin-top:5px;text-align: center;vertical-align: middle;line-height: 30px;padding-top: 10px;padding-bottom: 10px;padding-left: 10px;padding-right: 10px;"
              class="content-box">
-            <!--            <div th:each="n :${c.nearRank}" class="flex-box padding-20 rank-box">-->
-            <!--                <div th:text="${n.getServerClassRank()} + '.' + ${n.getName()}"></div>-->
-            <!--                <div th:text="'Lv.' + ${n.getLevel()} + '(' + ${n.getExpPercent()} + ')'"></div>-->
-            <!--            </div>-->
-            <div th:each="n :${c.nearRank}" class="flex-box-vertical rank-box" >
-                <div class="flex-box">
-                    <div th:text="${n.getServerClassRank()} + '.' + ${n.getName()}"></div>
-                    <div th:text="'Lv.' + ${n.getLevel()} + '(' + ${n.getExpPercent()} + ')'"></div>
-                </div>
-                <div class="flex-box" style="font-size: 12px">
-                    <div th:text="'7天日均' + ${n.avgExp7String}"></div>
-                    <div th:text="${n.currentExpString} + '/' + ${n.expNeedString} + '(' + ${c.differExp(n)} +')'"></div>
-                </div>
+            <div th:each="n :${c.nearRank}" class="flex-box padding-20 rank-box">
+                <div th:text="${n.getServerClassRank()} + '.' + ${n.getName()}"></div>
+                <div th:text="'Lv.' + ${n.getLevel()} + '(' + ${n.getExpPercent()} + ')'"></div>
             </div>
         </div>
         <div style="margin-top: 5px;text-align: center;vertical-align: middle;line-height: 30px" class="head-box">
@@ -202,9 +180,7 @@
         </div>
         <div class="content-box"
              style="padding-top: 20px;padding-bottom: 10px;text-align: center;margin-top: 5px;">
-            <div class="level-predicate-grid">
-                <div style="line-height: 1.5" th:each="p:${levelPredicate}" th:text="${p.lv()} + ':' + ${p.dateLabel()}"></div>
-            </div>
+            <div style="line-height: 1.5" th:each="p:${levelPredicate}" th:text="${p.lv()} + ':' + ${p.dateLabel()}" ></div>
         </div>
     </div>
     <div class="pure-u-6-24 head-box" style="text-align: center;margin-bottom: 10px;">Created By: CoderMinnan</div>

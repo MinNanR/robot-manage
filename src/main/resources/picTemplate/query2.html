@@ -118,7 +118,7 @@
         </div>
 
     </div>
-    <div class="pure-u-12-24" style="padding: 10px 10px 10px 5px">
+    <div class="pure-u-13-24" style="padding: 10px 10px 10px 5px">
         <div style="margin-top: 5px;text-align: center;vertical-align: middle;line-height: 30px" class="head-box">
             <span>每日经验获取</span>
         </div>
@@ -159,7 +159,7 @@
                 <div class="content-box" style="margin-top: 5px;padding-top: 10px;padding-bottom: 10px;text-align: center;">
                     <div class="flex-box padding-20"  th:each="expItem: ${exp}" style="line-height: 1.5">
                         <div th:text="${expItem.dateLabel() + ':'}"></div>
-                        <div th:text="${expItem.formatExpDifference()}"></div>
+                        <div th:text="${expItem.formatExpDifferenceShort()}"></div>
                     </div>
                 </div>
             </div>
@@ -176,7 +176,7 @@
                 <div style="margin-top: 5px;text-align: center;vertical-align: middle;line-height: 30px" class="head-box">
                     <span>附近职业排名</span>
                 </div>
-                <div class="content-box" style="margin-top: 5px;padding-top: 10px;padding-bottom: 10px;text-align: center;">
+                <div class="content-box padding-20" style="margin-top: 5px;padding-top: 10px;padding-bottom: 10px;text-align: center;">
                     <div th:each="n :${c.nearRank}" class="flex-box padding-20 rank-box">
                         <div th:text="${n.getServerClassRank()} + '.' + ${n.getName()}"></div>
                         <div th:text="'Lv.' + ${n.getLevel()} + '(' + ${n.getExpPercent()} + ')'"></div>
@@ -185,7 +185,7 @@
             </div>
         </div>
     </div>
-    <div class="pure-u-6-24" style="padding: 10px 10px 10px 5px">
+    <div class="pure-u-5-24" style="padding: 10px 10px 10px 5px">
         <div style="margin-top: 5px;text-align: center;vertical-align: middle;line-height: 30px" class="head-box">
             <span>特别关注</span>
         </div>
