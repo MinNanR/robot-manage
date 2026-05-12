@@ -881,6 +881,9 @@ public class CharacterSupportServiceImpl implements CharacterSupportService {
         for (CharacterRecordMysql tagRecord : tagChracterInfoList) {
             Integer characterId = tagRecord.getId();
             List<CharacterExpDailyMysql> expRecordList = groupByCharacterId.getOrDefault(characterId, new ArrayList<>());
+            if (expRecordList.isEmpty()) {
+                continue;
+            }
             List<ExpData> expData = toExpData(expRecordList, lvExpMap);
             CharacterData item = new CharacterData();
             double avgExp = expData.subList(expData.size() - 7, expData.size()).stream()
