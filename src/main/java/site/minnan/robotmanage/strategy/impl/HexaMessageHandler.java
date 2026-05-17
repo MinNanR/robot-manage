@@ -1,7 +1,6 @@
 package site.minnan.robotmanage.strategy.impl;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.ReUtil;
@@ -13,7 +12,6 @@ import site.minnan.robotmanage.infrastructure.utils.BotSessionUtil;
 import site.minnan.robotmanage.strategy.MessageHandler;
 
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -111,26 +109,26 @@ public class HexaMessageHandler implements MessageHandler {
 
     private static final String VERSION_ASSEMBLE = "assemble";
 
+    private static final String VERSION_CROWN = "crown";
+
     private enum Version {
+        NEW_AGE("newAge", origin, M1, V1, V2, V3, V4),
 
-        NEW_AGE("newAge", new SkillCount(1, 1, 4, 0), new String[][]{{"起源"}, {"精通"}, {"V1", "V2", "V3", "V4"}, {}}),
+        DREAMER("dreamer", origin, M1, M2, V1, V2, V3, V4, janus),
 
-        DREAMER("dreamer", new SkillCount(1, 2, 4, 1), new String[][]{{"起源"}, {"精通1", "精通2"}, {"V1", "V2", "V3", "V4"}, {"通用"}}),
+        NEXT("next", origin, M1, M2, M3, M4, V1, V2, V3, V4, janus),
 
-        NEXT("next", new SkillCount(1, 4, 4, 1), new String[][]{{"起源"}, {"精通1", "精通2", "精通3", "精通4"}, {"V1", "V2", "V3", "V4"}, {"通用"}}),
+        ASSEMBLE("assemble", origin, ascent, M1, M2, M3, M4, V1, V2, V3, V4, janus),
 
-        ASSEMBLE("assemble", new SkillCount(2, 4, 4, 1), new String[][]{{"起源1", "起源2"}, {"精通1", "精通2", "精通3", "精通4"}, {"V1", "V2", "V3", "V4"}, {"通用"}});
+        CROWN("crown", origin, ascent, M1, M2, M3, M4, V1, V2, V3, V4, janus, hecate),
+        ;
+        private final String versionName;
 
-        final String versionName;
+        private final List<Skill> skillList;
 
-        final SkillCount skillCount;
-
-        final String[][] labels;
-
-        Version(String name, SkillCount skillCount, String[][] labels) {
-            this.versionName = name;
-            this.skillCount = skillCount;
-            this.labels = labels;
+        Version(String versionName, Skill... skills) {
+            this.versionName = versionName;
+            this.skillList = Arrays.asList(skills);
         }
 
         static Version getByName(String name) {
@@ -142,25 +140,134 @@ public class HexaMessageHandler implements MessageHandler {
             }
             return values[0];
         }
+
+        private int count(SkillType skillType) {
+            int count = 0;
+            for (Skill skill : skillList) {
+                if (skill.skillType == skillType) {
+                    count++;
+                }
+            }
+            return count;
+        }
+
+        private List<Skill> getSkill(SkillType skillType) {
+            List<Skill> result = new ArrayList<>();
+            for (Skill skill : skillList) {
+                if (skill.skillType == skillType) {
+                    result.add(skill);
+                }
+            }
+            return result;
+        }
     }
 
-//    static {
-//        skillCountMap = Map.of(
-//                VERSION_NEW_AGE, new SkillCount(1, 1, 4, 0),
-//                VERSION_DREAMER, new SkillCount(1, 2, 4, 1),
-//                VERSION_NEXT, new SkillCount(1, 4, 4, 1),
-//                VERSION_ASSEMBLE, new SkillCount(2, 4, 4, 1)
-//        );
-//
-//        labelVersion = Map.of(
-//                VERSION_NEW_AGE, new String[][]{{"起源"}, {"精通"}, {"V1", "V2", "V3", "V4"}, {}},
-//                VERSION_DREAMER, new String[][]{{"起源"}, {"精通1", "精通2"}, {"V1", "V2", "V3", "V4"}, {"通用"}},
-//                VERSION_NEXT, new String[][]{{"起源"}, {"精通1", "精通2", "精通3", "精通4"}, {"V1", "V2", "V3", "V4"}, {"通用"}}
-//        );
-//
-//
-//    }
+    private interface SkillTypeInterface {
+        List<Integer> getTarget(UserHexa hexa);
+    }
 
+    private enum SkillType implements SkillTypeInterface {
+        H() {
+            @Override
+            public List<Integer> getTarget(UserHexa hexa) {
+                return hexa.h;
+            }
+        },
+        M() {
+            @Override
+            public List<Integer> getTarget(UserHexa hexa) {
+                return hexa.m;
+            }
+        },
+        V() {
+            @Override
+            public List<Integer> getTarget(UserHexa hexa) {
+                return hexa.v;
+            }
+        },
+        C() {
+            @Override
+            public List<Integer> getTarget(UserHexa hexa) {
+                return hexa.c;
+            }
+        }
+    }
+
+
+    private record Skill(String label, SkillType skillType, int[] usage) {
+    }
+
+    private static final Skill origin = new Skill("H1", SkillType.H, new int[]{
+            0, 0, 30, 35, 40, 45, 50, 55, 60, 65, 200,
+            80, 90, 100, 110, 120, 130, 140, 150, 160, 350,
+            170, 180, 190, 200, 210, 220, 230, 240, 250, 500
+    });
+
+    private static final Skill ascent = new Skill("H2", SkillType.H, new int[]{
+            0, 100, 30, 35, 40, 45, 50, 55, 60, 65, 200,
+            80, 90, 100, 110, 120, 130, 140, 150, 160, 350,
+            170, 180, 190, 200, 210, 220, 230, 240, 250, 500
+    });
+
+    private static final Skill M1 = new Skill("精通1", SkillType.M, new int[]{
+            0, 50, 15, 18, 20, 23, 25, 28, 30, 33, 100,
+            40, 45, 50, 55, 60, 65, 70, 75, 80, 175,
+            85, 90, 95, 100, 105, 110, 115, 120, 125, 250
+    });
+
+    private static final Skill M2 = new Skill("精通2", SkillType.M, new int[]{
+            0, 50, 15, 18, 20, 23, 25, 28, 30, 33, 100,
+            40, 45, 50, 55, 60, 65, 70, 75, 80, 175,
+            85, 90, 95, 100, 105, 110, 115, 120, 125, 250
+    });
+
+    private static final Skill M3 = new Skill("精通3", SkillType.M, new int[]{
+            0, 50, 15, 18, 20, 23, 25, 28, 30, 33, 100,
+            40, 45, 50, 55, 60, 65, 70, 75, 80, 175,
+            85, 90, 95, 100, 105, 110, 115, 120, 125, 250
+    });
+
+    private static final Skill M4 = new Skill("精通4", SkillType.M, new int[]{
+            0, 50, 15, 18, 20, 23, 25, 28, 30, 33, 100,
+            40, 45, 50, 55, 60, 65, 70, 75, 80, 175,
+            85, 90, 95, 100, 105, 110, 115, 120, 125, 250
+    });
+
+    private static final Skill V1 = new Skill("V1", SkillType.V, new int[]{
+            0, 75, 23, 27, 30, 34, 38, 42, 45, 49, 150,
+            60, 68, 75, 83, 90, 98, 105, 113, 120, 263,
+            128, 135, 143, 150, 158, 165, 173, 180, 188, 375
+    });
+
+    private static final Skill V2 = new Skill("V2", SkillType.V, new int[]{
+            0, 75, 23, 27, 30, 34, 38, 42, 45, 49, 150,
+            60, 68, 75, 83, 90, 98, 105, 113, 120, 263,
+            128, 135, 143, 150, 158, 165, 173, 180, 188, 375
+    });
+
+    private static final Skill V3 = new Skill("V3", SkillType.V, new int[]{
+            0, 75, 23, 27, 30, 34, 38, 42, 45, 49, 150,
+            60, 68, 75, 83, 90, 98, 105, 113, 120, 263,
+            128, 135, 143, 150, 158, 165, 173, 180, 188, 375
+    });
+
+    private static final Skill V4 = new Skill("V4", SkillType.V, new int[]{
+            0, 75, 23, 27, 30, 34, 38, 42, 45, 49, 150,
+            60, 68, 75, 83, 90, 98, 105, 113, 120, 263,
+            128, 135, 143, 150, 158, 165, 173, 180, 188, 375
+    });
+
+    private static final Skill janus = new Skill("通用1", SkillType.C, new int[]{
+            0, 125, 38, 44, 50, 57, 63, 69, 75, 72, 300,
+            110, 124, 138, 152, 165, 179, 193, 207, 220,
+            525, 234, 248, 262, 275, 289, 303, 317, 330, 344, 750
+    });
+
+    private static final Skill hecate = new Skill("通用2", SkillType.C, new int[]{
+            0, 125, 38, 44, 50, 57, 63, 69, 75, 72, 300,
+            110, 124, 138, 152, 165, 179, 193, 207, 220,
+            525, 234, 248, 262, 275, 289, 303, 317, 330, 344, 750
+    });
 
     @Value("${game_version:assemble}")
     private String gameVersion;
@@ -200,7 +307,7 @@ public class HexaMessageHandler implements MessageHandler {
                 return doCalculate(dto, maxTarget());
             }
         } catch (Exception e) {
-            return Optional.of("请输入正确的计算指令" + "\n" + tips());
+            return Optional.of("请输入正确的计算指令" + "\n" + tips(Version.getByName(gameVersion)));
         }
 
     }
@@ -208,31 +315,30 @@ public class HexaMessageHandler implements MessageHandler {
     private Optional<String> doCalculate(MessageDTO dto, UserHexa userTarget) {
         String message = dto.getRawMessage();
         String param = message.toLowerCase().replace("hexa", "").strip();
+        Version version = Version.getByName(gameVersion);
         UserHexa userCurrent;
         try {
             userCurrent = parseUserHexa(param);
         } catch (Exception e) {
-            return Optional.of("请输入正确的计算指令" + "\n" + tips());
+            return Optional.of("请输入正确的计算指令" + "\n" + tips(version));
         }
 
-        Version version = Version.getByName(gameVersion);
-        String[][] labels = version.labels;
-        CalculatePart sgementh = executeCalculatePartH(userCurrent, userTarget, UserHexa::h, USAGE_SKILL, labels[0]);
-        CalculatePart sgementm = executeCalculatePart(userCurrent, userTarget, UserHexa::m, USAGE_MASTERY, labels[1]);
-        CalculatePart sgementv = executeCalculatePart(userCurrent, userTarget, UserHexa::v, USAGE_ENHANCE, labels[2]);
-        CalculatePart sgementc = executeCalculatePart(userCurrent, userTarget, UserHexa::c, USAGE_COMMON, labels[3]);
+        SkillType[] types = SkillType.values();
+        List<CalculatePart> sgementList = Arrays.stream(types)
+                .flatMap(e -> {
+                    List<Integer> current = e.getTarget(userCurrent);
+                    List<Integer> target = e.getTarget(userTarget);
+                    List<Skill> skillList = version.getSkill(e);
+                    int length = Math.min(current.size(), target.size());
+                    length = Math.min(length, skillList.size());
+                    return Stream.iterate(0, i -> i + 1).limit(length)
+                            .map(idx -> executeCalculatePart(current.get(idx), target.get(idx), skillList.get(idx)));
+                })
+                .toList();
 
-        String content = Stream.of(sgementh, sgementm, sgementv, sgementc)
-                .flatMap(e -> e.content.stream())
-                .collect(Collectors.joining("\n"));
-
-        int totalSpent = Stream.of(sgementh, sgementm, sgementv, sgementc)
-                .mapToInt(e -> e.spent)
-                .sum();
-
-        int totalNeed = Stream.of(sgementh, sgementm, sgementv, sgementc)
-                .mapToInt(e -> e.need)
-                .sum();
+        String content = sgementList.stream().map(e -> e.content).collect(Collectors.joining("\n"));
+        int totalSpent = sgementList.stream().mapToInt(e -> e.spent).sum();
+        int totalNeed = sgementList.stream().mapToInt(e -> e.need).sum();
 
         String process = NumberUtil.formatPercent((double) totalSpent / totalNeed, 2);
 
@@ -250,38 +356,38 @@ public class HexaMessageHandler implements MessageHandler {
         List<String> commonLevelString = ReUtil.findAllGroup1("c(\\s?(\\d+\\s*)*)", userInput);
 
         Version version = Version.getByName(gameVersion);
-        SkillCount skillCount = version.skillCount;
+//        SkillCount skillCount = version.skillList.size();
 
-        List<Integer> h = null;
-        List<Integer> m = null;
-        List<Integer> v = null;
-        List<Integer> c = null;
+        List<Integer> h = new ArrayList<>();
+        List<Integer> m = new ArrayList<>();
+        List<Integer> v = new ArrayList<>();
+        List<Integer> c = new ArrayList<>();
 
         if (CollUtil.isNotEmpty(originLevelString)) {
             String levelString = originLevelString.get(0);
             List<Integer> levels = splitLevel(levelString);
-            int step = Math.min(levels.size(), skillCount.h);
+            int step = Math.min(levels.size(), version.count(SkillType.H));
             h = levels.subList(0, step);
         }
 
         if (CollUtil.isNotEmpty(masteryLevelString)) {
             String levelString = masteryLevelString.get(0);
             List<Integer> levels = splitLevel(levelString);
-            int step = Math.min(levels.size(), skillCount.m);
+            int step = Math.min(levels.size(), version.count(SkillType.M));
             m = levels.subList(0, step);
         }
 
         if (CollUtil.isNotEmpty(enhanceLevelString)) {
             String levelString = enhanceLevelString.get(0);
             List<Integer> levels = splitLevel(levelString);
-            int step = Math.min(levels.size(), skillCount.v);
+            int step = Math.min(levels.size(), version.count(SkillType.V));
             v = levels.subList(0, step);
         }
 
         if (CollUtil.isNotEmpty(commonLevelString)) {
             String levelString = commonLevelString.get(0);
             List<Integer> levels = splitLevel(levelString);
-            int step = Math.min(levels.size(), skillCount.c);
+            int step = Math.min(levels.size(), version.count(SkillType.C));
             c = levels.subList(0, step);
         }
 
@@ -298,92 +404,26 @@ public class HexaMessageHandler implements MessageHandler {
 
     private UserHexa maxTarget() {
         Version version = Version.getByName(gameVersion);
-        SkillCount skillCount = version.skillCount;
 
-        List<Integer> h = Collections.nCopies(skillCount.h, 30);
-        List<Integer> m = Collections.nCopies(skillCount.m, 30);
-        List<Integer> v = Collections.nCopies(skillCount.v, 30);
-        List<Integer> c = Collections.nCopies(skillCount.c, 30);
+        List<Integer> h = Collections.nCopies(version.count(SkillType.H), 30);
+        List<Integer> m = Collections.nCopies(version.count(SkillType.M), 30);
+        List<Integer> v = Collections.nCopies(version.count(SkillType.V), 30);
+        List<Integer> c = Collections.nCopies(version.count(SkillType.C), 30);
 
         return new UserHexa(h, m, v, c);
     }
 
-    private record CalculatePart(List<String> content, Integer spent, Integer need) {
+    private record CalculatePart(String content, Integer spent, Integer need) {
     }
 
-    private CalculatePart executeCalculatePart(UserHexa currentInfo, UserHexa targetInfo,
-                                               Function<UserHexa, List<Integer>> getProcess, int[] usage, String[] labels) {
-        List<Integer> current = getProcess.apply(currentInfo);
-        List<Integer> target = getProcess.apply(targetInfo);
-        if (current == null || target == null) {
-            return new CalculatePart(List.of(), 0, 0);
-        }
-        Assert.isTrue(current.size() <= labels.length && target.size() <= labels.length);
+    private CalculatePart executeCalculatePart(int current, int target, Skill skill) {
+        int need = Arrays.stream(ArrayUtil.sub(skill.usage, 0, target + 1)).sum();
+        int spent = Arrays.stream(ArrayUtil.sub(skill.usage, 0, current + 1)).sum();
+        int needToMax = need - spent;
+        String process = NumberUtil.formatPercent((double) spent / need, 2);
+        String line = "%s: %d/%d，还需%d个小核，进度%s".formatted(skill.label, spent, need, needToMax, process);
+        return new CalculatePart(line, spent, need);
 
-        Iterator<Integer> currentItr = current.iterator();
-        Iterator<Integer> targetItr = target.iterator();
-
-        int idx = 0;
-        List<String> result = new ArrayList<>();
-        int totalNeed = 0;
-        int totalSpent = 0;
-        while (currentItr.hasNext() && targetItr.hasNext()) {
-            Integer currentItem = currentItr.next();
-            Integer targetItem = targetItr.next();
-            currentItem = Math.min(currentItem, targetItem);
-            String label = labels[idx];
-            int need = Arrays.stream(ArrayUtil.sub(usage, 0, targetItem + 1)).sum();
-            int spent = Arrays.stream(ArrayUtil.sub(usage, 0, currentItem + 1)).sum();
-            totalNeed += need;
-            totalSpent += spent;
-            int needToMax = need - spent;
-            String process = NumberUtil.formatPercent((double) spent / need, 2);
-            String line = "%s: %d/%d，还需%d个小核，进度%s".formatted(label, spent, need, needToMax, process);
-            result.add(line);
-            idx++;
-        }
-
-        return new CalculatePart(result, totalSpent, totalNeed);
-    }
-
-    private CalculatePart executeCalculatePartH(UserHexa currentInfo, UserHexa targetInfo,
-                                                Function<UserHexa, List<Integer>> getProcess, int[] usage, String[] labels) {
-        List<Integer> current = getProcess.apply(currentInfo);
-        List<Integer> target = getProcess.apply(targetInfo);
-        if (current == null || target == null) {
-            return new CalculatePart(List.of(), 0, 0);
-        }
-        Assert.isTrue(current.size() <= labels.length && target.size() <= labels.length);
-
-        Iterator<Integer> currentItr = current.iterator();
-        Iterator<Integer> targetItr = target.iterator();
-
-        int idx = 0;
-        List<String> result = new ArrayList<>();
-        int totalNeed = 0;
-        int totalSpent = 0;
-        int[] usageH = new int[usage.length];
-        System.arraycopy(usage, 0, usageH, 0, usage.length);
-        usageH[1] = 100;
-
-        while (currentItr.hasNext() && targetItr.hasNext()) {
-            Integer currentItem = currentItr.next();
-            Integer targetItem = targetItr.next();
-            currentItem = Math.min(currentItem, targetItem);
-            String label = labels[idx];
-            int need = Arrays.stream(ArrayUtil.sub(usage, 0, targetItem + 1)).sum();
-            int spent = Arrays.stream(ArrayUtil.sub(usage, 0, currentItem + 1)).sum();
-            totalNeed += need;
-            totalSpent += spent;
-            int needToMax = need - spent;
-            String process = NumberUtil.formatPercent((double) spent / need, 2);
-            String line = "%s: %d/%d，还需%d个小核，进度%s".formatted(label, spent, need, needToMax, process);
-            result.add(line);
-            idx++;
-            usage = usageH;
-        }
-
-        return new CalculatePart(result, totalSpent, totalNeed);
     }
 
     public List<Integer> splitLevel(String s) {
@@ -398,5 +438,24 @@ public class HexaMessageHandler implements MessageHandler {
                 hexa h 起源等级 m 精通1等级 精通2等级 v V1等级 V2等级 V3等级 V4等级 c 通用等级
                 如果输入的技能数量少于游戏实际数量，则认为未输入的技能不参与计算
                 """;
+    }
+
+    private static String tips(Version version) {
+        SkillType[] types = SkillType.values();
+        StringBuilder sb = new StringBuilder();
+        sb.append("hexa ");
+        for (SkillType type : types) {
+            String typeCommand = type.name().toLowerCase();
+            sb.append(typeCommand);
+            List<Skill> skillList = version.getSkill(type);
+            skillList.forEach(skill -> sb.append(" ").append(skill.label).append("等级"));
+            sb.append(" ");
+        }
+        sb.append("\n").append("如果输入的技能数量少于游戏实际数量，则认为未输入的技能不参与计算");
+        return sb.toString();
+    }
+
+    public static void main(String[] args) {
+        System.out.println(tips(Version.CROWN));
     }
 }
