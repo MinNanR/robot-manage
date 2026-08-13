@@ -17,7 +17,8 @@ public class BotReply {
         BotReply reply = new BotReply();
         reply.statusCode = statusCode;
         Map<String, String> payload = new HashMap<>();
-        msg = ReUtil.replaceAll(msg, "minnan.site:\\d+/", "minnan.site/");
+        msg = ReUtil.replaceAll(msg, "https", "http");
+        msg = ReUtil.replaceAll(msg, "minnan\\.site:\\d+/", "minnan.site/");
         msg = ReUtil.replaceAll(msg, ",subType=0", "");
         payload.put("msg", msg);
         reply.data = payload;

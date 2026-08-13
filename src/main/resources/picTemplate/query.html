@@ -253,9 +253,25 @@
                 itemStyle: {
                     //color: "#709ce9"
                     color: (params => {
-                        if(params.value > 7000) {
+                        if (params.value > 60000) {
+                            return {
+                                type: 'linear',
+                                x: 0, y: 0, x2: 0, y2: 1,
+                                colorStops: [
+                                    { offset: 0, color: '#FF0000' },
+                                    { offset: 0.17, color: '#FF8800' },
+                                    { offset: 0.33, color: '#FFFF00' },
+                                    { offset: 0.5, color: '#00FF00' },
+                                    { offset: 0.67, color: '#0088FF' },
+                                    { offset: 0.83, color: '#4444FF' },
+                                    { offset: 1, color: '#8B00FF' }
+                                ]
+                            }
+                        } else if (params.value > 35000) {
+                            return "#8A2BE2"
+                        } else if(params.value > 20000) {
                             return "#FF0000"
-                        } else if (params.value > 5000) {
+                        } else if (params.value > 10000) {
                             return "#f3b334"
                         } else {
                             return "#709ce9"

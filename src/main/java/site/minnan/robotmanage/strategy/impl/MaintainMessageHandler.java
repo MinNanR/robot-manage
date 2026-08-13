@@ -38,7 +38,7 @@ public class MaintainMessageHandler implements MessageHandler {
     public Optional<String> handleMessage(MessageDTO dto) {
         Optional<MaintainRecord> maintain = maintainService.getMaintain();
         String result = maintain.map(e -> {
-                    String s = "维护时间：%s到%s".formatted(e.getStartTime(), e.getEndTime());
+                    String s = "维护时间：**%s**到**%s**".formatted(e.getStartTime(), e.getEndTime());
                     String title = e.getTitle();
                     if (title != null && ReUtil.contains("(?i)CASH SHOP", title)) {
                         s = s + "(商城维护)";
@@ -46,6 +46,7 @@ public class MaintainMessageHandler implements MessageHandler {
                     return s;
                 })
                 .orElse("暂无维护公告");
+        result = markdownWrapper(result);
         return Optional.of(result);
     }
 }

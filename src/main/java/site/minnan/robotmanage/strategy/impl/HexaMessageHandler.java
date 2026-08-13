@@ -121,6 +121,8 @@ public class HexaMessageHandler implements MessageHandler {
         ASSEMBLE("assemble", origin, ascent, M1, M2, M3, M4, V1, V2, V3, V4, janus),
 
         CROWN("crown", origin, ascent, M1, M2, M3, M4, V1, V2, V3, V4, janus, hecate),
+
+        CROWN_SUB("crown_sub", origin, ascent, M1, M2, M3, M4, V1, V2, V3, V4, janus, hecate, job_common)
         ;
         private final String versionName;
 
@@ -269,6 +271,12 @@ public class HexaMessageHandler implements MessageHandler {
             525, 234, 248, 262, 275, 289, 303, 317, 330, 344, 750
     });
 
+    private static final Skill job_common = new Skill("通用3", SkillType.C, new int[]{
+            0, 90, 25, 30, 35, 40, 45, 50, 55, 60, 180,
+            73, 81, 90, 98, 107, 115, 124, 132, 141, 315,
+            151, 160, 170, 179, 189, 198, 208, 217, 227, 450
+    });
+
     @Value("${game_version:assemble}")
     private String gameVersion;
 
@@ -342,10 +350,10 @@ public class HexaMessageHandler implements MessageHandler {
 
         String process = NumberUtil.formatPercent((double) totalSpent / totalNeed, 2);
 
-        String totalLine = "总进度:%d/%d，还需要%d个小核，进度%s".formatted(totalSpent, totalNeed, totalNeed - totalSpent, process);
+        String totalLine = "总进度:%d/%d，还需要**%d**个小核，进度**%s**".formatted(totalSpent, totalNeed, totalNeed - totalSpent, process);
 
         botSessionUtil.endSession(dto.getGroupId(), dto.getSender().userId());
-        return Optional.of(content + "\n" + totalLine);
+        return Optional.of(markdownWrapper(content + "\n" + totalLine));
     }
 
 
@@ -421,7 +429,7 @@ public class HexaMessageHandler implements MessageHandler {
         int spent = Arrays.stream(ArrayUtil.sub(skill.usage, 0, current + 1)).sum();
         int needToMax = need - spent;
         String process = NumberUtil.formatPercent((double) spent / need, 2);
-        String line = "%s: %d/%d，还需%d个小核，进度%s".formatted(skill.label, spent, need, needToMax, process);
+        String line = "**%s**: %d/%d，还需**%d**个小核，进度**%s**".formatted(skill.label, spent, need, needToMax, process);
         return new CalculatePart(line, spent, need);
 
     }

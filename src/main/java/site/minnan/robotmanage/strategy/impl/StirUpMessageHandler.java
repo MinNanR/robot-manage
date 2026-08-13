@@ -26,7 +26,9 @@ public class StirUpMessageHandler implements MessageHandler {
         this.trigramRepository = trigramRepository;
     }
 
-    private static final String PIC_URL_TEMPLATE = "[CQ:image,file=https://minnan.site:2005/rot/trigram/trigram/%s.png,subType=0]";
+//    private static final String PIC_URL_TEMPLATE = "[CQ:image,file=https://minnan.site:2005/rot/trigram/trigram/%s.png,subType=0]";
+
+    private static final String PIC_URL_TEMPLATE = "![text#1200px #500px](https://minnan.site:2005/rot/trigram/trigram/%s.png)";
 
     private TrigramRepository trigramRepository;
 
@@ -71,11 +73,11 @@ public class StirUpMessageHandler implements MessageHandler {
         String message = """
                 %s
                 本卦上卦解为 %s，下卦解为 %s
-                解为%s，%s，%s，%s
-                --------
+                解为**%s，%s，%s，%s**
+                
                 变卦上卦解为 %s，下卦解为 %s
-                解为%s，%s，%s，%s
-                象曰：%s
+                解为**%s，%s，%s，%s**
+                象曰：**%s**
                 """
                 .formatted(picLine,
                         yaoName[ogUpTrigramIndex], yaoName[ogDownTrigramIndex],
@@ -85,6 +87,7 @@ public class StirUpMessageHandler implements MessageHandler {
                         chTrigram.getExplanation());
 
 
+        message = markdownWrapper(message);
         return Optional.of("\n" + message);
     }
 

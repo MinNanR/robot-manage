@@ -95,7 +95,8 @@ def insert_data(data_to_insert: list):
             character_id = result.lastrowid
             item["character_id"] = character_id
             conn.execute(exp_sql, item)
-            logger.info("保存[%s]数据", item["character_name"])
+            # logger.info("保存[%s]数据", item["character_name"])
+
 
 @sleep_and_retry
 @limits(calls=1, period=1)
@@ -109,7 +110,7 @@ def do_query(url, lv_map, region):
     stop_flag = False
     for item in raw_data:
         lv = item["level"]
-        stop_flag = lv < 270
+        stop_flag = lv < 275
         if stop_flag:
             break
         if lv < 300:
@@ -130,6 +131,7 @@ def do_query(url, lv_map, region):
         })
     try:
         insert_data(data_to_insert)
+        logger.info("保存[%s]数据", ",".join([item["character_name"] for item in data_to_insert]))
     except Exception as ex:
         logger.exception("写入数据库异常,%s", ex)
     return stop_flag
