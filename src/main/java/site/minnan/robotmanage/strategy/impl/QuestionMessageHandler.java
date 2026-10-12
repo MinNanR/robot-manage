@@ -7,20 +7,15 @@ import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
 import com.aliyun.oss.OSS;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import site.minnan.robotmanage.entity.aggregate.Answer;
-import site.minnan.robotmanage.entity.aggregate.Auth;
 import site.minnan.robotmanage.entity.aggregate.Question;
 import site.minnan.robotmanage.entity.dao.AnswerRepository;
-import site.minnan.robotmanage.entity.dao.AuthRepository;
 import site.minnan.robotmanage.entity.dao.QuestionGroupRepository;
 import site.minnan.robotmanage.entity.dao.QuestionRepository;
 import site.minnan.robotmanage.entity.dto.MessageDTO;
-import site.minnan.robotmanage.entity.enumeration.AuthEnum;
-import site.minnan.robotmanage.entity.enumeration.Authentic;
 import site.minnan.robotmanage.infrastructure.exception.EntityNotExistException;
 import site.minnan.robotmanage.infrastructure.utils.BotSessionUtil;
 import site.minnan.robotmanage.strategy.MessageHandler;
@@ -56,10 +51,6 @@ public class QuestionMessageHandler implements MessageHandler {
     private QuestionGroupRepository questionGroupRepository;
 
     private BotSessionUtil botSessionUtil;
-
-    @Autowired
-    private AuthRepository authRepository;
-
 
     private static final String bucketName = "link-server";
 
@@ -224,9 +215,8 @@ public class QuestionMessageHandler implements MessageHandler {
      */
     private Optional<String> queryQuestion(MessageDTO dto) {
         String message = dto.getRawMessage();
-        String queryContent = message.replace("查询问题", "");
+        String queryContent = message.replace("查询问题", "").strip();
         String groupId = dto.getGroupId();
-        String userId = dto.getSender().userId();
 
         Question question = questionRepository.findByContentIgnoreCaseAndGroupIdAndWhetherDeleteIs(queryContent, groupId, 0);
 
@@ -237,18 +227,69 @@ public class QuestionMessageHandler implements MessageHandler {
         Integer questionId = question.getId();
 
         List<Answer> answerList = answerRepository.findAnswerByQuestionIdInAndWhetherDeleteIs(Collections.singleton(questionId), 0);
-        int answerCount = answerList.size();
-        String reply = """
-                问题内容：%s
-                问题id：%d
-                关联答案数量：%d
-                展示码：%d,
-                查看答案输入1，删除问题输入2，修改展示码输入3:{展示码}，输入-1结束
-                """.formatted(question.getContent(), questionId, answerCount, question.getGroupMask());
 
-        botSessionUtil.startSession(groupId, userId, e -> questionQueryOperate(e, questionId, answerList));
+        StringBuilder content = new StringBuilder();
+        content.append("**问题：**").append(question.getContent()).append('\n')
+                .append("问题ID：**").append(questionId).append("**\n")
+                .append("答案数量：**").append(answerList.size()).append("**\n")
+                .append("展示码：**").append(question.getGroupMask()).append("**");
 
-        return Optional.of(reply);
+        if (CollectionUtil.isNotEmpty(answerList)) {
+            for (int i = 0; i < answerList.size(); i++) {
+                Answer answer = answerList.get(i);
+                content.append("\n\n")
+                        .append("**答案").append(i + 1).append("**（答案ID：").append(answer.getId()).append("）\n\n")
+                        .append(toMarkdownContent(answer.getContent()));
+            }
+        } else {
+            content.append("\n\n暂无答案");
+        }
+
+        content.append("\n\n---\n")
+                .append("删除问题请发送：`删除问题").append(questionId).append("`\n")
+                .append("删除答案请发送：`删除答案{答案id}`");
+
+        return Optional.of(markdownWrapper(content.toString()));
+    }
+
+    /**
+     * 将答案内容中的[CQ:image]图片片段转换为markdown图片语法，
+     * 使多个图片能够正常排版展示
+     *
+     * @param answer 答案内容
+     * @return 转换后的内容
+     */
+    private String toMarkdownContent(String answer) {
+        Pattern imagePattern = Pattern.compile("\\[CQ:image,.*?]");
+        List<String> imageResultList = ReUtil.findAllGroup0(imagePattern, answer);
+        for (String imageResult : imageResultList) {
+            String imageUrl = extractImageUrl(imageResult);
+            if (imageUrl != null) {
+                answer = answer.replace(imageResult, "![text#500px #500px](%s)".formatted(imageUrl));
+            }
+        }
+        return answer;
+    }
+
+    /**
+     * 从[CQ:image]片段中提取图片地址，优先取url参数，其次取http开头的file参数
+     *
+     * @param cqImage CQ图片片段
+     * @return 图片地址，无法解析时返回null
+     */
+    private String extractImageUrl(String cqImage) {
+        List<String> urlResult = ReUtil.findAllGroup1("url=(.*?)[;\\]]", cqImage);
+        if (CollectionUtil.isNotEmpty(urlResult)) {
+            return urlResult.get(0);
+        }
+        List<String> fileResult = ReUtil.findAllGroup1("file=(.*?)[;\\]]", cqImage);
+        if (CollectionUtil.isNotEmpty(fileResult)) {
+            String file = fileResult.get(0);
+            if (file.startsWith("http")) {
+                return file;
+            }
+        }
+        return null;
     }
 
     private String enhanceAnswer(String answer) {
@@ -276,126 +317,5 @@ public class QuestionMessageHandler implements MessageHandler {
 
         return answer;
     }
-
-    private static final int OPERATE_REFER = 1;//查看操作
-    private static final int OPERATE_DELETE = 2;//删除操作
-
-    private Optional<String> questionQueryOperate(MessageDTO dto, Integer questionId, List<Answer> answerList) {
-        String message = dto.getRawMessage();
-        String groupId = dto.getGroupId();
-        String userId = dto.getSender().userId();
-        if (message.equals("1")) {
-            Answer answer = answerList.get(0);
-            String reply = """
-                    答案id：%d,
-                    答案内容：%s,
-                    查看下一条输入1，删除答案输入2，输入-1结束
-                    """.formatted(answer.getId(), answer.getContent());
-
-            botSessionUtil.updateSessionMessageHandler(groupId, userId, e -> iterateAnswer(e, answerList, 0, OPERATE_REFER));
-            return Optional.of(reply);
-        } else if ("2".equals(message)) {
-            Auth authObj = authRepository.findByUserIdAndGroupId(userId, groupId);
-            int auth = authObj == null ? 0 : authObj.getAuthNumber();
-//            if ((auth & 0b10000) == 0) {
-            if (AuthEnum.DELETE_QUESTION.isAuthorized(auth)) {
-                return Optional.of("当前用户无删除问题权限");
-            }
-            //删除问题
-            Optional<Question> questionOpt = questionRepository.findById(questionId);
-            questionOpt.ifPresent(e -> {
-                e.setWhetherDelete(1);
-                e.setUpdater("QQ:" + userId);
-                e.setUpdateTime(DateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
-                questionRepository.save(e);
-            });
-            //删除问题后没有后续操作
-            botSessionUtil.endSession(groupId, userId);
-            return Optional.of("删除问题成功");
-        } else if (ReUtil.isMatch("3[:：](.*)", message)) {
-            //修改展示掩码
-            String[] messageSplit = message.split("[:：]");
-            if (messageSplit.length < 2) {
-                return Optional.of("请输入正确的展示码");
-            }
-            try {
-                int groupMask = Integer.parseInt(messageSplit[1]);
-                Optional<Question> question = questionRepository.findById(questionId);
-                question.ifPresent(e -> {
-                    e.setGroupMask(groupMask);
-                    e.setUpdater("QQ:" + userId);
-                    e.setUpdateTime(DateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
-                    questionRepository.save(e);
-                });
-                String replay = """
-                        问题id:%d，展示码已修改为：%d
-                        查看答案输入1，删除问题输入2，修改展示码输入3:{展示码}，输入-1结束
-                        """.formatted(questionId, groupMask);
-                return Optional.of(replay);
-            } catch (NumberFormatException e) {
-                return Optional.of("请输入正确的展示码");
-            }
-        }
-
-        return Optional.empty();
-    }
-
-    /**
-     * 答案迭代回复
-     *
-     * @param messageDTO      消息
-     * @param answerList      答案列表
-     * @param indexCur        游标
-     * @param lastOperateFlag 上一个操作标记，
-     * @see QuestionMessageHandler#OPERATE_REFER
-     * @see QuestionMessageHandler#OPERATE_DELETE
-     * @return
-     */
-    private Optional<String> iterateAnswer(MessageDTO messageDTO, List<Answer> answerList, int indexCur, int lastOperateFlag) {
-        String message = messageDTO.getRawMessage();
-        String groupId = messageDTO.getGroupId();
-        String userId = messageDTO.getSender().userId();
-
-        if ("1".equals(message)) {
-            if (indexCur == answerList.size() - 1 && lastOperateFlag == OPERATE_REFER) {
-                return Optional.of("已是最后一个答案");
-            }
-            //上一个是查看操作，则游标下移，如果是删除操作，则游标不下移（删除时游标已经下移）
-            int currentIndex = lastOperateFlag == OPERATE_REFER ? indexCur + 1 : indexCur;
-            Answer answer = answerList.get(currentIndex);
-            String reply = """
-                    答案id：%d
-                    答案内容：%s
-                    查看下一条输入1，删除答案输入2，输入-1结束
-                    """.formatted(answer.getId(), answer.getContent());
-            botSessionUtil.updateSessionMessageHandler(groupId, userId, dto -> iterateAnswer(dto, answerList, currentIndex, OPERATE_REFER));
-            return Optional.of(reply);
-        } else if ("2".equals(message)) {
-            Auth authObj = authRepository.findByUserIdAndGroupId(userId, groupId);
-            int auth = authObj == null ? 0 : authObj.getAuthNumber();
-//            if ((auth & 0b10000) == 0) {
-            if (!AuthEnum.DELETE_ANSWER.isAuthorized(auth)) {
-                return Optional.of("当前用户无删除答案权限");
-            }
-            Answer answer = answerList.get(indexCur);
-            answer.setWhetherDelete(1);
-            answer.setUpdater("QQ:" + userId);
-            answer.setUpdateTime(DateTime.now().toString("yyyy-MM-dd HH:mm:ss"));
-            answerRepository.save(answer);
-            //游标下移
-            int currentIndex = indexCur + 1;
-            botSessionUtil.updateSessionMessageHandler(groupId, userId, dto -> iterateAnswer(dto, answerList, currentIndex, OPERATE_DELETE));
-            String reply = """
-                    答案%d已删除
-                    查看下一条输入1，删除答案输入2，输入-1结束
-                    """.formatted(answer.getId());
-
-            return Optional.of(reply);
-        } else {
-            return Optional.of("请输入正确的操作码");
-        }
-
-    }
-
 
 }
